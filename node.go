@@ -9,12 +9,6 @@ type Node struct {
 	children map[int][]*Node
 }
 
-func (n *Node) Children(level int) []*Node {
-	children := append([]*Node{}, n)
-	children = append(children, n.children[level]...)
-	return children
-}
-
 func (n *Node) addChild(c *Node, level int) {
 	if n.children == nil {
 		n.children = make(map[int][]*Node)
@@ -27,7 +21,10 @@ func Insert(node *Node, coverSet []*Node, level int) bool {
 
 	var coverSetChildren []*Node
 	for _, cn := range coverSet {
-		for _, child := range cn.Children(level - 1) {
+		if node.Item.Distance(cn.Item) <= distThreshold {
+			coverSetChildren = append(coverSetChildren, cn)
+		}
+		for _, child := range cn.children[level-1] {
 			if node.Item.Distance(child.Item) <= distThreshold {
 				coverSetChildren = append(coverSetChildren, child)
 			}
