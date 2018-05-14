@@ -34,18 +34,16 @@ func Insert(node *Node, coverSet []*Node, level int) bool {
 		}
 	}
 
-	if len(coverSetChildren) == 0 {
-		return false
-	}
-
-	if Insert(node, coverSetChildren, level-1) {
-		return true
-	}
-
-	for _, cn := range coverSet {
-		if node.Item.Distance(cn.Item) <= distThreshold {
-			cn.addChild(node, level-1)
+	if len(coverSetChildren) > 0 {
+		if Insert(node, coverSetChildren, level-1) {
 			return true
+		}
+
+		for _, cn := range coverSet {
+			if node.Item.Distance(cn.Item) <= distThreshold {
+				cn.addChild(node, level-1)
+				return true
+			}
 		}
 	}
 
