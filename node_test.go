@@ -44,23 +44,11 @@ func TestSomething(t *testing.T) {
 		Item: Point{1},
 	}
 
-	result := Insert(&Node{Item: Point{1.1}}, []*Node{root}, 10)
-	fmt.Println("Result", result)
-
-	result = Insert(&Node{Item: Point{1.5}}, []*Node{root}, 10)
-	fmt.Println("Result", result)
-
-	result = Insert(&Node{Item: Point{1.05}}, []*Node{root}, 10)
-	fmt.Println("Result", result)
-
-	result = Insert(&Node{Item: Point{7.05}}, []*Node{root}, 10)
-	fmt.Println("Result", result)
-
-	result = Insert(&Node{Item: Point{1.52}}, []*Node{root}, 10)
-	fmt.Println("Result", result)
-
-	result = Insert(&Node{Item: Point{1.053}}, []*Node{root}, 10)
-	fmt.Println("Result", result)
+	for i := 1; i < 20; i++ {
+		val := float64(i)/10.0 + 1
+		result := Insert(&Node{Item: Point{val}}, []*Node{root}, 10)
+		fmt.Println("Result", result)
+	}
 
 	PrintTree(root, 10, 0)
 }

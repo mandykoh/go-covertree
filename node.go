@@ -16,34 +16,21 @@ func (n *Node) Children(level int) []*Node {
 }
 
 func Insert(node *Node, coverSet []*Node, level int) bool {
-	var coverSetChildren []*Node
-	for _, c := range coverSet {
-		coverSetChildren = append(coverSetChildren, c.Children(level-1)...)
-	}
-
 	distThreshold := math.Pow(2, float64(level))
 
-	minFound := false
-	minDist := 0.0
-	for _, c := range coverSetChildren {
-		dist := node.Item.Distance(c.Item)
-		if dist < minDist || !minFound {
-			minDist = dist
-			minFound = true
+	var coverSetChildren []*Node
+	for _, cn := range coverSet {
+		for _, child := range cn.Children(level - 1) {
+			if node.Item.Distance(child.Item) <= distThreshold {
+				coverSetChildren = append(coverSetChildren, child)
+			}
 		}
 	}
-	if minFound && minDist > distThreshold {
+	if len(coverSetChildren) == 0 {
 		return false
 	}
 
-	var childCoverSet []*Node
-	for _, c := range coverSetChildren {
-		if node.Item.Distance(c.Item) <= distThreshold {
-			childCoverSet = append(childCoverSet, c)
-		}
-	}
-
-	if Insert(node, childCoverSet, level-1) {
+	if Insert(node, coverSetChildren, level-1) {
 		return true
 	}
 
