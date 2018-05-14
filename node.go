@@ -15,6 +15,13 @@ func (n *Node) Children(level int) []*Node {
 	return children
 }
 
+func (n *Node) addChild(c *Node, level int) {
+	if n.children == nil {
+		n.children = make(map[int][]*Node)
+	}
+	n.children[level] = append(n.children[level], c)
+}
+
 func Insert(node *Node, coverSet []*Node, level int) bool {
 	distThreshold := math.Pow(2, float64(level))
 
@@ -26,6 +33,7 @@ func Insert(node *Node, coverSet []*Node, level int) bool {
 			}
 		}
 	}
+
 	if len(coverSetChildren) == 0 {
 		return false
 	}
@@ -34,12 +42,9 @@ func Insert(node *Node, coverSet []*Node, level int) bool {
 		return true
 	}
 
-	for _, c := range coverSet {
-		if node.Item.Distance(c.Item) <= distThreshold {
-			if c.children == nil {
-				c.children = make(map[int][]*Node)
-			}
-			c.children[level-1] = append(c.children[level-1], node)
+	for _, cn := range coverSet {
+		if node.Item.Distance(cn.Item) <= distThreshold {
+			cn.addChild(node, level-1)
 			return true
 		}
 	}
