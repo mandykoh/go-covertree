@@ -16,28 +16,12 @@ func (n *Node) addChild(c *Node, level int) {
 	n.children[level] = append(n.children[level], c)
 }
 
-func (n *Node) getChildrenWithinDistance(node *Node, distThreshold float64, childLevel int, dest *[]*Node) {
-	if node.Item.Distance(n.Item) <= distThreshold {
-		*dest = append(*dest, n)
-	}
-
-	for _, child := range n.children[childLevel] {
-		if node.Item.Distance(child.Item) <= distThreshold {
-			*dest = append(*dest, child)
-		}
-	}
-}
-
-func Insert(node *Node, coverSet []*Node, level int) bool {
+func Insert(node *Node, coverSet coverSet, level int) bool {
 	distThreshold := math.Pow(2, float64(level))
+	childCoverSet := coverSet.child(node.Item, distThreshold, level-1)
 
-	var coverSetChildren []*Node
-	for _, cn := range coverSet {
-		cn.getChildrenWithinDistance(node, distThreshold, level-1, &coverSetChildren)
-	}
-
-	if len(coverSetChildren) > 0 {
-		if Insert(node, coverSetChildren, level-1) {
+	if len(childCoverSet) > 0 {
+		if Insert(node, childCoverSet, level-1) {
 			return true
 		}
 
