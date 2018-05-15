@@ -2,7 +2,7 @@ package covertree
 
 type coverSet []*Node
 
-func (cs *coverSet) child(item Coverable, distThreshold float64, childLevel int) (child coverSet) {
+func (cs *coverSet) child(item Item, distThreshold float64, childLevel int) (child coverSet) {
 	for _, node := range *cs {
 
 		if item.Distance(node.Item) <= distThreshold {

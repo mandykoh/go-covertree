@@ -5,18 +5,18 @@ import (
 )
 
 type Node struct {
-	Item     Coverable
+	Item     Item
 	Children map[int][]Node
 }
 
-func (n *Node) addChild(item Coverable, level int) {
+func (n *Node) addChild(item Item, level int) {
 	if n.Children == nil {
 		n.Children = make(map[int][]Node)
 	}
 	n.Children[level] = append(n.Children[level], Node{Item: item})
 }
 
-func Insert(item Coverable, coverSet coverSet, level int) bool {
+func Insert(item Item, coverSet coverSet, level int) bool {
 	distThreshold := math.Pow(2, float64(level))
 	childCoverSet := coverSet.child(item, distThreshold, level-1)
 

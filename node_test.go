@@ -11,7 +11,11 @@ type Point struct {
 	x float64
 }
 
-func (p Point) Distance(other Coverable) float64 {
+func (p Point) CoverTreeID() string {
+	return fmt.Sprintf("%0.0f", p.x)
+}
+
+func (p Point) Distance(other Item) float64 {
 	op := other.(Point)
 	return math.Abs(op.x - p.x)
 }
