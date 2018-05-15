@@ -25,30 +25,31 @@ func PrintTree(n *Node, level int, indentLevel int) {
 	fmt.Println(n.Item)
 
 	var levels []int
-	for k := range n.children {
+	for k := range n.Children {
 		levels = append(levels, k)
 	}
 	sort.Ints(levels)
 
 	for i := len(levels) - 1; i >= 0; i-- {
 		l := levels[i]
-		for _, c := range n.children[l] {
-			PrintTree(c, l, indentLevel+1)
+		children := n.Children[l]
+		for i := range children {
+			PrintTree(&children[i], l, indentLevel+1)
 		}
 	}
 }
 
 func TestSomething(t *testing.T) {
 
-	root := &Node{
+	root := Node{
 		Item: Point{1},
 	}
 
 	for i := 1; i < 20; i++ {
 		val := float64(i)/10.0 + 1
-		result := Insert(&Node{Item: Point{val}}, []*Node{root}, 10)
+		result := Insert(Point{val}, coverSet{&root}, 10)
 		fmt.Println("Result", result)
 	}
 
-	PrintTree(root, 10, 0)
+	PrintTree(&root, 10, 0)
 }
