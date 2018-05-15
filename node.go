@@ -4,34 +4,27 @@ import (
 	"math"
 )
 
-type Node struct {
-	Item     Item
-	Children map[int][]Node
-}
-
-func (n *Node) addChild(item Item, level int) {
-	if n.Children == nil {
-		n.Children = make(map[int][]Node)
-	}
-	n.Children[level] = append(n.Children[level], Node{Item: item})
-}
-
-func Insert(item Item, coverSet coverSet, level int) bool {
+func Insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err error) {
 	distThreshold := math.Pow(2, float64(level))
-	childCoverSet := coverSet.child(item, distThreshold, level-1)
+
+	childCoverSet, err := coverSet.child(item, distThreshold, level-1, store)
+	if err != nil {
+		return false, err
+	}
 
 	if len(childCoverSet) > 0 {
-		if Insert(item, childCoverSet, level-1) {
-			return true
+		ok, err = Insert(item, childCoverSet, level-1, store)
+		if ok || err != nil {
+			return
 		}
 
-		for _, cn := range coverSet {
-			if item.Distance(cn.Item) <= distThreshold {
-				cn.addChild(item, level-1)
-				return true
+		for _, csItem := range coverSet {
+			if item.Distance(csItem) <= distThreshold {
+				err := store.Save(item, csItem, level-1)
+				return err == nil, err
 			}
 		}
 	}
 
-	return false
+	return false, nil
 }

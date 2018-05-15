@@ -1,20 +1,23 @@
 package covertree
 
-type coverSet []*Node
+type coverSet []Item
 
-func (cs *coverSet) child(item Item, distThreshold float64, childLevel int) (child coverSet) {
-	for _, node := range *cs {
+func (cs *coverSet) child(item Item, distThreshold float64, childLevel int, store Store) (child coverSet, err error) {
+	for _, csItem := range *cs {
 
-		if item.Distance(node.Item) <= distThreshold {
-			child = append(child, node)
+		if item.Distance(csItem) <= distThreshold {
+			child = append(child, csItem)
 		}
 
-		children := node.Children[childLevel]
+		children, err := store.Load(csItem, childLevel)
+		if err != nil {
+			return nil, err
+		}
 
 		for i := 0; i < len(children); i++ {
-			childNode := &children[i]
-			if item.Distance(childNode.Item) <= distThreshold {
-				child = append(child, childNode)
+			childItem := children[i]
+			if item.Distance(childItem) <= distThreshold {
+				child = append(child, childItem)
 			}
 		}
 	}

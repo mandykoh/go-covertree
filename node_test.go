@@ -12,48 +12,48 @@ type Point struct {
 }
 
 func (p Point) CoverTreeID() string {
-	return fmt.Sprintf("%0.0f", p.x)
+	return fmt.Sprintf("%g", p.x)
 }
 
 func (p Point) Distance(other Item) float64 {
-	op := other.(Point)
+	op := other.(*Point)
 	return math.Abs(op.x - p.x)
 }
 
-func PrintTree(n *Node, level int, indentLevel int) {
+func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) {
 	fmt.Printf("%4d: ", level)
 	for i := 0; i < indentLevel; i++ {
 		fmt.Print("  ")
 	}
 
-	fmt.Println(n.Item)
+	fmt.Println(item.CoverTreeID())
 
 	var levels []int
-	for k := range n.Children {
+	for k := range store.levelsFor(item) {
 		levels = append(levels, k)
 	}
 	sort.Ints(levels)
 
 	for i := len(levels) - 1; i >= 0; i-- {
 		l := levels[i]
-		children := n.Children[l]
-		for i := range children {
-			PrintTree(&children[i], l, indentLevel+1)
+		children, _ := store.Load(item, l)
+		for _, c := range children {
+			PrintTree(c, l, indentLevel+1, store)
 		}
 	}
 }
 
 func TestSomething(t *testing.T) {
 
-	root := Node{
-		Item: Point{1},
-	}
+	store := &InMemoryStore{}
+
+	root := &Point{1}
 
 	for i := 1; i < 20; i++ {
 		val := float64(i)/10.0 + 1
-		result := Insert(Point{val}, coverSet{&root}, 10)
-		fmt.Println("Result", result)
+		ok, err := Insert(&Point{val}, coverSet{root}, 10, store)
+		fmt.Println("Result", ok, err)
 	}
 
-	PrintTree(&root, 10, 0)
+	PrintTree(root, 10, 0, store)
 }
