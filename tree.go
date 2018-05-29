@@ -1,13 +1,26 @@
 package covertree
 
-import "math"
+import (
+	"math"
+)
 
 type Tree struct {
-	root Item
+	root      Item
+	rootLevel int
 }
 
 func (t *Tree) Insert(item Item, store Store) (ok bool, err error) {
-	return insert(item, coverSet{t.root}, 10, store)
+	if t.root == nil {
+		t.root = item
+		t.rootLevel = math.MaxInt32
+		return true, nil
+	}
+
+	if t.rootLevel == math.MaxInt32 {
+		t.rootLevel = int(math.Ceil(math.Log2(t.root.Distance(item))))
+	}
+
+	return insert(item, coverSet{t.root}, t.rootLevel, store)
 }
 
 func insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err error) {

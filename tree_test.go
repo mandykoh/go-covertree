@@ -47,9 +47,10 @@ func TestSomething(t *testing.T) {
 
 	store := &InMemoryStore{}
 
-	tree := &Tree{
-		root: &Point{1},
-	}
+	root := &Point{10}
+
+	tree := &Tree{}
+	tree.Insert(root, store)
 
 	for i := 1; i < 20; i++ {
 		val := float64(i)/10.0 + 1
