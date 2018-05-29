@@ -1,10 +1,16 @@
 package covertree
 
-import (
-	"math"
-)
+import "math"
 
-func Insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err error) {
+type Tree struct {
+	root Item
+}
+
+func (t *Tree) Insert(item Item, store Store) (ok bool, err error) {
+	return insert(item, coverSet{t.root}, 10, store)
+}
+
+func insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err error) {
 	distThreshold := math.Pow(2, float64(level))
 
 	childCoverSet, err := coverSet.child(item, distThreshold, level-1, store)
@@ -13,7 +19,7 @@ func Insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err 
 	}
 
 	if len(childCoverSet) > 0 {
-		ok, err = Insert(item, childCoverSet, level-1, store)
+		ok, err = insert(item, childCoverSet, level-1, store)
 		if ok || err != nil {
 			return
 		}

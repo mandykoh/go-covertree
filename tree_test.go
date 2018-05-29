@@ -47,13 +47,15 @@ func TestSomething(t *testing.T) {
 
 	store := &InMemoryStore{}
 
-	root := &Point{1}
+	tree := &Tree{
+		root: &Point{1},
+	}
 
 	for i := 1; i < 20; i++ {
 		val := float64(i)/10.0 + 1
-		ok, err := Insert(&Point{val}, coverSet{root}, 10, store)
+		ok, err := tree.Insert(&Point{val}, store)
 		fmt.Println("Result", ok, err)
 	}
 
-	PrintTree(root, 10, 0, store)
+	PrintTree(tree.root, 10, 0, store)
 }
