@@ -17,7 +17,7 @@ func (t *Tree) Insert(item Item, store Store) (ok bool, err error) {
 	}
 
 	if t.rootLevel == math.MaxInt32 {
-		t.rootLevel = int(math.Ceil(math.Log2(t.root.Distance(item))))
+		t.rootLevel = int(math.Log2(t.root.Distance(item)) + 1)
 	}
 
 	return insert(item, coverSet{t.root}, t.rootLevel, store)
