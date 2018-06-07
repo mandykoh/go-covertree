@@ -23,7 +23,10 @@ func (p Point) Distance(other Item) float64 {
 func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) {
 	fmt.Printf("%4d: ", level)
 	for i := 0; i < indentLevel; i++ {
-		fmt.Print("  ")
+		fmt.Print("..")
+	}
+	if indentLevel > 0 {
+		fmt.Print(" ")
 	}
 
 	fmt.Println(item.CoverTreeID())
@@ -54,8 +57,8 @@ func TestSomething(t *testing.T) {
 
 	for i := 1; i < 20; i++ {
 		val := float64(i)/10.0 + 1
-		ok, err := tree.Insert(&Point{val}, store)
-		fmt.Println("Result", ok, err)
+		err := tree.Insert(&Point{val}, store)
+		fmt.Println("Result", err)
 	}
 
 	fmt.Println(tree.Insert(&Point{1000}, store))

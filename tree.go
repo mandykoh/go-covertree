@@ -9,29 +9,29 @@ type Tree struct {
 	rootLevel int
 }
 
-func (t *Tree) Insert(item Item, store Store) (ok bool, err error) {
+func (t *Tree) Insert(item Item, store Store) error {
 	if t.root == nil {
 		t.root = item
 		t.rootLevel = math.MaxInt32
-		return true, nil
+		return nil
 	}
 
 	if t.rootLevel == math.MaxInt32 {
-		t.rootLevel = int(math.Log2(t.root.Distance(item)) + 1)
+		t.rootLevel = levelForDistance(t.root, item)
 	}
 
-	ok, err = insert(item, coverSet{t.root}, t.rootLevel, store)
+	parentFound, err := insert(item, coverSet{t.root}, t.rootLevel, store)
 
-	if !ok && err == nil {
+	if !parentFound && err == nil {
 		t.root, item = item, t.root
-		t.rootLevel = int(math.Log2(t.root.Distance(item)) + 1)
-		ok, err = insert(item, coverSet{t.root}, t.rootLevel, store)
+		t.rootLevel = levelForDistance(t.root, item)
+		_, err = insert(item, coverSet{t.root}, t.rootLevel, store)
 	}
 
-	return
+	return err
 }
 
-func insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err error) {
+func insert(item Item, coverSet coverSet, level int, store Store) (parentFound bool, err error) {
 	distThreshold := math.Pow(2, float64(level))
 
 	childCoverSet, err := coverSet.child(item, distThreshold, level-1, store)
@@ -40,8 +40,8 @@ func insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err 
 	}
 
 	if len(childCoverSet) > 0 {
-		ok, err = insert(item, childCoverSet, level-1, store)
-		if ok || err != nil {
+		parentFound, err = insert(item, childCoverSet, level-1, store)
+		if parentFound || err != nil {
 			return
 		}
 
@@ -54,4 +54,8 @@ func insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err 
 	}
 
 	return false, nil
+}
+
+func levelForDistance(item1, item2 Item) int {
+	return int(math.Log2(item1.Distance(item2)) + 1)
 }
