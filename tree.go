@@ -20,7 +20,15 @@ func (t *Tree) Insert(item Item, store Store) (ok bool, err error) {
 		t.rootLevel = int(math.Log2(t.root.Distance(item)) + 1)
 	}
 
-	return insert(item, coverSet{t.root}, t.rootLevel, store)
+	ok, err = insert(item, coverSet{t.root}, t.rootLevel, store)
+
+	if !ok && err == nil {
+		t.root, item = item, t.root
+		t.rootLevel = int(math.Log2(t.root.Distance(item)) + 1)
+		ok, err = insert(item, coverSet{t.root}, t.rootLevel, store)
+	}
+
+	return
 }
 
 func insert(item Item, coverSet coverSet, level int, store Store) (ok bool, err error) {

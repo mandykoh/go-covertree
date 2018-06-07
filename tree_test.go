@@ -58,5 +58,7 @@ func TestSomething(t *testing.T) {
 		fmt.Println("Result", ok, err)
 	}
 
+	fmt.Println(tree.Insert(&Point{1000}, store))
+
 	PrintTree(tree.root, 10, 0, store)
 }
