@@ -6,13 +6,14 @@ import (
 	"math/rand"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 var distanceCalls = 0
 
-type Point [10]float64
+type Point [3]float64
 
 func RandomPoint(scale float64) Point {
 	p := Point{}
@@ -43,16 +44,19 @@ func (p Point) Distance(other Item) float64 {
 	return math.Sqrt(total)
 }
 
-func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) (count int) {
-	fmt.Printf("%4d: ", level)
-	for i := 0; i < indentLevel; i++ {
-		fmt.Print("..")
-	}
-	if indentLevel > 0 {
-		fmt.Print(" ")
+func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore, actuallyPrint bool) (count int) {
+	if actuallyPrint {
+		fmt.Printf("%4d: ", level)
+		for i := 0; i < indentLevel; i++ {
+			fmt.Print("..")
+		}
+		if indentLevel > 0 {
+			fmt.Print(" ")
+		}
+
+		fmt.Println(item.CoverTreeID())
 	}
 
-	fmt.Println(item.CoverTreeID())
 	count = 1
 
 	var levels []int
@@ -65,7 +69,7 @@ func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) (cou
 		l := levels[i]
 		children, _ := store.Load(item, l)
 		for _, c := range children {
-			count += PrintTree(c, l, indentLevel+1, store)
+			count += PrintTree(c, l, indentLevel+1, store, actuallyPrint)
 		}
 	}
 
@@ -74,7 +78,7 @@ func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) (cou
 
 //func TestSomething(t *testing.T) {
 //
-//	store := &InMemoryStore{}
+//	store := NewInMemoryStore()
 //
 //	root := &Point{10, 10, 10}
 //
@@ -104,7 +108,7 @@ func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) (cou
 //}
 
 func TestRandom(t *testing.T) {
-	store := &InMemoryStore{}
+	store := NewInMemoryStore()
 	tree := &Tree{}
 
 	seed := time.Now().UnixNano()
@@ -129,19 +133,42 @@ func TestRandom(t *testing.T) {
 	distanceCalls = 0
 	startTime := time.Now()
 
-	for i := range values {
-		err := tree.Insert(&values[i], store)
-		if err != nil {
-			fmt.Printf("Error inserting %v: %v\n", values[i], err)
-		}
+	pointsToInsert := make(chan *Point)
+
+	const insertThreads = 8
+
+	treeReady := sync.WaitGroup{}
+	treeReady.Add(insertThreads)
+	for i := 0; i < insertThreads; i++ {
+		go func() {
+			for {
+				p, ok := <-pointsToInsert
+				if !ok {
+					break
+				}
+
+				err := tree.Insert(p, store)
+				if err != nil {
+					fmt.Printf("Error inserting %v: %v\n", values[i], err)
+				}
+			}
+
+			treeReady.Done()
+		}()
 	}
+
+	for i := range values {
+		pointsToInsert <- &values[i]
+	}
+	close(pointsToInsert)
+	treeReady.Wait()
 
 	finishTime := time.Now()
 
 	fmt.Printf("Building tree took %d distance calls, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 
-	//nodeCount := PrintTree(tree.root, tree.rootLevel, 0, store)
-	//fmt.Printf("Found %d nodes in tree\n", nodeCount)
+	nodeCount := PrintTree(tree.root, tree.rootLevel, 0, store, false)
+	fmt.Printf("Found %d nodes in tree\n", nodeCount)
 
 	for n := 0; n < 5; n++ {
 		fmt.Println()

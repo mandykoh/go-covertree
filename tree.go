@@ -1,14 +1,15 @@
 package covertree
 
 import (
-	"fmt"
 	"math"
+	"sync"
 )
 
 type Tree struct {
 	root         Item
 	rootLevel    int
 	deepestLevel int
+	mutex        sync.Mutex
 }
 
 func (t *Tree) FindNearest(query Item, store Store) (results []Item, err error) {
@@ -42,10 +43,12 @@ func (t *Tree) FindNearest(query Item, store Store) (results []Item, err error) 
 }
 
 func (t *Tree) Insert(item Item, store Store) error {
+	t.mutex.Lock()
 	if t.root == nil {
 		t.root = item
 		t.rootLevel = math.MaxInt32
 		t.deepestLevel = t.rootLevel
+		t.mutex.Unlock()
 		return nil
 	}
 
@@ -53,17 +56,19 @@ func (t *Tree) Insert(item Item, store Store) error {
 		t.rootLevel = levelForDistance(t.root, item)
 		t.deepestLevel = t.rootLevel
 	}
+	t.mutex.Unlock()
 
 	parentFound, insertLevel, err := insert(item, coverSet{makeCoverSetItem(t.root, item)}, t.rootLevel, store)
 
 	if err == nil {
+		t.mutex.Lock()
+
 		if parentFound {
 			if insertLevel < t.deepestLevel {
 				t.deepestLevel = insertLevel
 			}
 
 		} else {
-			fmt.Println("Reparenting")
 			newRootLevel := levelForDistance(item, t.root)
 
 			_, _, err = insert(t.root, coverSet{makeCoverSetItem(item, t.root)}, newRootLevel, store)
@@ -72,6 +77,8 @@ func (t *Tree) Insert(item Item, store Store) error {
 				t.rootLevel = newRootLevel
 			}
 		}
+
+		t.mutex.Unlock()
 	}
 
 	return err
