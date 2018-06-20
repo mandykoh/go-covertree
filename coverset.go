@@ -5,7 +5,7 @@ type coverSet []coverSetItem
 func (cs *coverSet) child(item Item, distThreshold float64, childLevel int, store Store) (child coverSet, err error) {
 	for _, csItem := range *cs {
 
-		if csItem.Distance(item) <= distThreshold {
+		if csItem.distance <= distThreshold {
 			child = append(child, csItem)
 		}
 
@@ -15,8 +15,8 @@ func (cs *coverSet) child(item Item, distThreshold float64, childLevel int, stor
 		}
 
 		for i := 0; i < len(children); i++ {
-			childItem := makeCoverSetItem(children[i])
-			if childItem.Distance(item) <= distThreshold {
+			childItem := makeCoverSetItem(children[i], item)
+			if childItem.distance <= distThreshold {
 				child = append(child, childItem)
 			}
 		}

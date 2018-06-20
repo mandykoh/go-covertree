@@ -13,13 +13,13 @@ type Tree struct {
 
 func (t *Tree) FindNearest(query Item, store Store) (results []Item, err error) {
 	level := t.rootLevel
-	parentCoverSet := coverSet{makeCoverSetItem(t.root)}
+	parentCoverSet := coverSet{makeCoverSetItem(t.root, query)}
 
 	var childCoverSet coverSet
 	for level >= t.deepestLevel {
-		distThreshold := parentCoverSet[0].Distance(query)
+		distThreshold := parentCoverSet[0].distance
 		for i := 1; i < len(parentCoverSet); i++ {
-			dist := parentCoverSet[i].Distance(query)
+			dist := parentCoverSet[i].distance
 			if dist < distThreshold {
 				distThreshold = dist
 			}
@@ -54,7 +54,7 @@ func (t *Tree) Insert(item Item, store Store) error {
 		t.deepestLevel = t.rootLevel
 	}
 
-	parentFound, insertLevel, err := insert(item, coverSet{makeCoverSetItem(t.root)}, t.rootLevel, store)
+	parentFound, insertLevel, err := insert(item, coverSet{makeCoverSetItem(t.root, item)}, t.rootLevel, store)
 
 	if err == nil {
 		if parentFound {
@@ -66,7 +66,7 @@ func (t *Tree) Insert(item Item, store Store) error {
 			fmt.Println("Reparenting")
 			newRootLevel := levelForDistance(item, t.root)
 
-			_, _, err = insert(t.root, coverSet{makeCoverSetItem(item)}, newRootLevel, store)
+			_, _, err = insert(t.root, coverSet{makeCoverSetItem(item, t.root)}, newRootLevel, store)
 			if err == nil {
 				t.root = item
 				t.rootLevel = newRootLevel
@@ -92,7 +92,7 @@ func insert(item Item, coverSet coverSet, level int, store Store) (parentFound b
 		}
 
 		for _, csItem := range coverSet {
-			if csItem.Distance(item) <= distThreshold {
+			if csItem.distance <= distThreshold {
 				err := store.Save(item, csItem.item, level-1)
 				return err == nil, level - 1, err
 			}

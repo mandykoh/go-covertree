@@ -13,16 +13,29 @@ var distanceCalls = 0
 
 type Point struct {
 	x float64
+	y float64
+	z float64
+}
+
+func RandomPoint(scale float64) Point {
+	return Point{
+		rand.Float64() * scale,
+		rand.Float64() * scale,
+		rand.Float64() * scale,
+	}
 }
 
 func (p Point) CoverTreeID() string {
-	return fmt.Sprintf("%g", p.x)
+	return fmt.Sprintf("%x %x %x", math.Float64bits(p.x), math.Float64bits(p.y), math.Float64bits(p.z))
 }
 
 func (p Point) Distance(other Item) float64 {
 	distanceCalls++
 	op := other.(*Point)
-	return math.Abs(op.x - p.x)
+	diffX := op.x - p.x
+	diffY := op.y - p.y
+	diffZ := op.z - p.z
+	return math.Sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ)
 }
 
 func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) (count int) {
@@ -58,24 +71,24 @@ func TestSomething(t *testing.T) {
 
 	store := &InMemoryStore{}
 
-	root := &Point{10}
+	root := &Point{10, 10, 10}
 
 	tree := &Tree{}
 	tree.Insert(root, store)
 
 	for i := 1; i < 20; i++ {
 		val := float64(i)/10.0 + 1
-		err := tree.Insert(&Point{val}, store)
+		err := tree.Insert(&Point{val, val, val}, store)
 		fmt.Println("Result", err)
 	}
 
-	fmt.Println(tree.Insert(&Point{1000}, store))
+	fmt.Println(tree.Insert(&Point{1000, 1000, 1000}, store))
 
 	PrintTree(tree.root, 10, 0, store)
 
 	distanceCalls = 0
 
-	query := &Point{6.3}
+	query := &Point{6.3, 6.3, 6.3}
 	results, _ := tree.FindNearest(query, store)
 
 	fmt.Printf("FindNearest took %d distance calls\n", distanceCalls)
@@ -96,8 +109,8 @@ func TestRandom(t *testing.T) {
 	var values []Point
 	{
 		valuesMap := make(map[Point]bool)
-		for i := 0; i < 10000000; i++ {
-			val := Point{rand.Float64() * 1000}
+		for i := 0; i < 1000; i++ {
+			val := RandomPoint(1000)
 			valuesMap[val] = true
 		}
 
@@ -125,44 +138,48 @@ func TestRandom(t *testing.T) {
 	//nodeCount := PrintTree(tree.root, tree.rootLevel, 0, store)
 	//fmt.Printf("Found %d nodes in tree\n", nodeCount)
 
-	query := &Point{rand.Float64() * 1000}
-	fmt.Printf("Query point %v\n", *query)
+	for n := 0; n < 5; n++ {
+		fmt.Println()
 
-	distanceCalls = 0
-	startTime = time.Now()
+		query := RandomPoint(1000)
+		fmt.Printf("Query point %v\n", query)
 
-	results, _ := tree.FindNearest(query, store)
+		distanceCalls = 0
+		startTime = time.Now()
 
-	finishTime = time.Now()
+		results, _ := tree.FindNearest(&query, store)
 
-	fmt.Printf("FindNearest took %d distance comparisons, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
+		finishTime = time.Now()
 
-	for _, r := range results {
-		point := *(r.(*Point))
-		fmt.Printf("FindNearest: %v (distance %g)\n", point, r.Distance(query))
-	}
+		fmt.Printf("Cover Tree FindNearest took %d distance comparisons, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 
-	distanceCalls = 0
-	startTime = time.Now()
+		for _, r := range results {
+			point := *(r.(*Point))
+			fmt.Printf("Cover Tree FindNearest: %v (distance %g)\n", point, r.Distance(&query))
+		}
 
-	var nearest *Point
-	var nearestDist float64
-	for i := range values {
-		if nearest == nil {
-			nearest = &values[i]
-			nearestDist = query.Distance(nearest)
+		distanceCalls = 0
+		startTime = time.Now()
 
-		} else {
-			dist := query.Distance(&values[i])
-			if dist < nearestDist {
+		var nearest *Point
+		var nearestDist float64
+		for i := range values {
+			if nearest == nil {
 				nearest = &values[i]
-				nearestDist = dist
+				nearestDist = query.Distance(nearest)
+
+			} else {
+				dist := query.Distance(&values[i])
+				if dist < nearestDist {
+					nearest = &values[i]
+					nearestDist = dist
+				}
 			}
 		}
+
+		finishTime = time.Now()
+
+		fmt.Printf("Linear FindNearest took %d distance comparisons, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
+		fmt.Printf("Linear FindNearest: %v (distance %g)\n", *nearest, nearestDist)
 	}
-
-	finishTime = time.Now()
-
-	fmt.Printf("Linear Nearest took %d distance comparisons, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
-	fmt.Printf("Linear Nearest: %v (distance %g)\n", *nearest, nearestDist)
 }
