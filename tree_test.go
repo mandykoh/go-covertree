@@ -96,7 +96,7 @@ func TestRandom(t *testing.T) {
 	var values []Point
 	{
 		valuesMap := make(map[Point]bool)
-		for i := 0; i < 10000; i++ {
+		for i := 0; i < 10000000; i++ {
 			val := Point{rand.Float64() * 1000}
 			valuesMap[val] = true
 		}
@@ -164,5 +164,5 @@ func TestRandom(t *testing.T) {
 	finishTime = time.Now()
 
 	fmt.Printf("Linear Nearest took %d distance comparisons, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
-	fmt.Printf("Linear Nearest: %v (distance %g)\n", nearest, nearestDist)
+	fmt.Printf("Linear Nearest: %v (distance %g)\n", *nearest, nearestDist)
 }
