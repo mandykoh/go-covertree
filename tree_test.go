@@ -5,37 +5,42 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 )
 
 var distanceCalls = 0
 
-type Point struct {
-	x float64
-	y float64
-	z float64
-}
+type Point [10]float64
 
 func RandomPoint(scale float64) Point {
-	return Point{
-		rand.Float64() * scale,
-		rand.Float64() * scale,
-		rand.Float64() * scale,
+	p := Point{}
+	for i := 0; i < len(p); i++ {
+		p[i] = rand.Float64() * scale
 	}
+	return p
 }
 
-func (p Point) CoverTreeID() string {
-	return fmt.Sprintf("%x %x %x", math.Float64bits(p.x), math.Float64bits(p.y), math.Float64bits(p.z))
+func (p *Point) CoverTreeID() string {
+	var id strings.Builder
+	for i := 0; i < len(p); i++ {
+		id.WriteString(fmt.Sprintf(" %x", math.Float64bits(p[i])))
+	}
+	return id.String()
 }
 
 func (p Point) Distance(other Item) float64 {
 	distanceCalls++
 	op := other.(*Point)
-	diffX := op.x - p.x
-	diffY := op.y - p.y
-	diffZ := op.z - p.z
-	return math.Sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ)
+
+	total := 0.0
+	for i := 0; i < len(op); i++ {
+		diff := op[i] - p[i]
+		total += diff * diff
+	}
+
+	return math.Sqrt(total)
 }
 
 func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) (count int) {
@@ -67,36 +72,36 @@ func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore) (cou
 	return
 }
 
-func TestSomething(t *testing.T) {
-
-	store := &InMemoryStore{}
-
-	root := &Point{10, 10, 10}
-
-	tree := &Tree{}
-	tree.Insert(root, store)
-
-	for i := 1; i < 20; i++ {
-		val := float64(i)/10.0 + 1
-		err := tree.Insert(&Point{val, val, val}, store)
-		fmt.Println("Result", err)
-	}
-
-	fmt.Println(tree.Insert(&Point{1000, 1000, 1000}, store))
-
-	PrintTree(tree.root, 10, 0, store)
-
-	distanceCalls = 0
-
-	query := &Point{6.3, 6.3, 6.3}
-	results, _ := tree.FindNearest(query, store)
-
-	fmt.Printf("FindNearest took %d distance calls\n", distanceCalls)
-
-	for _, r := range results {
-		fmt.Printf("Nearest: %v (distance %.1f)\n", r, r.Distance(query))
-	}
-}
+//func TestSomething(t *testing.T) {
+//
+//	store := &InMemoryStore{}
+//
+//	root := &Point{10, 10, 10}
+//
+//	tree := &Tree{}
+//	tree.Insert(root, store)
+//
+//	for i := 1; i < 20; i++ {
+//		val := float64(i)/10.0 + 1
+//		err := tree.Insert(&Point{val, val, val}, store)
+//		fmt.Println("Result", err)
+//	}
+//
+//	fmt.Println(tree.Insert(&Point{1000, 1000, 1000}, store))
+//
+//	PrintTree(tree.root, 10, 0, store)
+//
+//	distanceCalls = 0
+//
+//	query := &Point{6.3, 6.3, 6.3}
+//	results, _ := tree.FindNearest(query, store)
+//
+//	fmt.Printf("FindNearest took %d distance calls\n", distanceCalls)
+//
+//	for _, r := range results {
+//		fmt.Printf("Nearest: %v (distance %.1f)\n", r, r.Distance(query))
+//	}
+//}
 
 func TestRandom(t *testing.T) {
 	store := &InMemoryStore{}
@@ -109,7 +114,7 @@ func TestRandom(t *testing.T) {
 	var values []Point
 	{
 		valuesMap := make(map[Point]bool)
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 1000000; i++ {
 			val := RandomPoint(1000)
 			valuesMap[val] = true
 		}
