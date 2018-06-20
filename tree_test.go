@@ -93,21 +93,34 @@ func TestRandom(t *testing.T) {
 	fmt.Println("Seed:", seed)
 	rand.Seed(seed)
 
-	values := make(map[Point]bool)
-	for i := 0; i < 10000000; i++ {
-		val := Point{rand.Float64() * 1000}
-		values[val] = true
+	var values []Point
+	{
+		valuesMap := make(map[Point]bool)
+		for i := 0; i < 10000; i++ {
+			val := Point{rand.Float64() * 1000}
+			valuesMap[val] = true
+		}
+
+		for k := range valuesMap {
+			values = append(values, k)
+		}
 	}
 
 	fmt.Printf("Inserting %d values\n", len(values))
 
-	for k := range values {
-		val := k
-		err := tree.Insert(&val, store)
+	distanceCalls = 0
+	startTime := time.Now()
+
+	for i := range values {
+		err := tree.Insert(&values[i], store)
 		if err != nil {
-			fmt.Printf("Error inserting %v: %v\n", k, err)
+			fmt.Printf("Error inserting %v: %v\n", values[i], err)
 		}
 	}
+
+	finishTime := time.Now()
+
+	fmt.Printf("Building tree took %d distance calls, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 
 	//nodeCount := PrintTree(tree.root, tree.rootLevel, 0, store)
 	//fmt.Printf("Found %d nodes in tree\n", nodeCount)
@@ -116,11 +129,11 @@ func TestRandom(t *testing.T) {
 	fmt.Printf("Query point %v\n", *query)
 
 	distanceCalls = 0
-	startTime := time.Now()
+	startTime = time.Now()
 
 	results, _ := tree.FindNearest(query, store)
 
-	finishTime := time.Now()
+	finishTime = time.Now()
 
 	fmt.Printf("FindNearest took %d distance comparisons, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 
@@ -132,21 +145,17 @@ func TestRandom(t *testing.T) {
 	distanceCalls = 0
 	startTime = time.Now()
 
-	var nearest Point
+	var nearest *Point
 	var nearestDist float64
-	nearestSet := false
-
-	for k := range values {
-		val := k
-		if !nearestSet {
-			nearestSet = true
-			nearest = k
-			nearestDist = query.Distance(&val)
+	for i := range values {
+		if nearest == nil {
+			nearest = &values[i]
+			nearestDist = query.Distance(nearest)
 
 		} else {
-			dist := query.Distance(&val)
+			dist := query.Distance(&values[i])
 			if dist < nearestDist {
-				nearest = k
+				nearest = &values[i]
 				nearestDist = dist
 			}
 		}
