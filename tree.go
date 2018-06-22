@@ -32,6 +32,8 @@ func (t *Tree) FindNearest(query Item, store Store) (results []Item, err error) 
 
 func (t *Tree) Insert(item Item, store Store) error {
 	t.mutex.Lock()
+
+	// Tree is empty - add item as the new root at infinity
 	if t.root == nil {
 		t.root = item
 		t.rootLevel = math.MaxInt32
@@ -42,10 +44,12 @@ func (t *Tree) Insert(item Item, store Store) error {
 
 	cs := coverSetWithItem(t.root, item)
 
+	// Tree only has a root at infinity - move root to appropriate level for the new item
 	if t.rootLevel == math.MaxInt32 {
 		t.rootLevel = levelForDistance(cs[0].distance)
 		t.deepestLevel = t.rootLevel
 	}
+
 	t.mutex.Unlock()
 
 	parentFoundAtLevel, err := insert(item, cs, t.rootLevel, store)
@@ -54,11 +58,15 @@ func (t *Tree) Insert(item Item, store Store) error {
 		t.mutex.Lock()
 
 		if parentFoundAtLevel < math.MaxInt32 {
+
+			// A parent was found - update the tree depth if appropriate
 			if parentFoundAtLevel < t.deepestLevel {
 				t.deepestLevel = parentFoundAtLevel - 1
 			}
 
 		} else {
+
+			// No parent found - re-parent the tree with the new item
 			cs := coverSetWithItem(item, t.root)
 			newRootLevel := levelForDistance(cs[0].distance)
 
