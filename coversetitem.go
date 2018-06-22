@@ -5,7 +5,7 @@ type coverSetItem struct {
 	distance float64
 }
 
-func makeCoverSetItem(item Item, query Item) coverSetItem {
+func coverSetItemForQuery(item Item, query Item) coverSetItem {
 	return coverSetItem{
 		item:     item,
 		distance: query.Distance(item),
