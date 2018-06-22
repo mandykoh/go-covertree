@@ -5,7 +5,6 @@ import (
 	"math"
 	"math/rand"
 	"sort"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -21,14 +20,6 @@ func RandomPoint(scale float64) Point {
 		p[i] = rand.Float64() * scale
 	}
 	return p
-}
-
-func (p *Point) CoverTreeID() string {
-	var id strings.Builder
-	for i := 0; i < len(p); i++ {
-		id.WriteString(fmt.Sprintf(" %x", math.Float64bits(p[i])))
-	}
-	return id.String()
 }
 
 func (p Point) Distance(other Item) float64 {
@@ -54,7 +45,7 @@ func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore, actu
 			fmt.Print(" ")
 		}
 
-		fmt.Println(item.CoverTreeID())
+		fmt.Println(item)
 	}
 
 	count = 1
@@ -118,7 +109,7 @@ func TestRandom(t *testing.T) {
 	var values []Point
 	{
 		valuesMap := make(map[Point]bool)
-		for i := 0; i < 1000000; i++ {
+		for i := 0; i < 100000; i++ {
 			val := RandomPoint(1000)
 			valuesMap[val] = true
 		}
