@@ -13,14 +13,12 @@ type Tree struct {
 }
 
 func (t *Tree) FindNearest(query Item, store Store) (results []Item, err error) {
-	level := t.rootLevel
 	cs := coverSetWithItem(t.root, query)
 
-	for level >= t.deepestLevel {
+	for level := t.rootLevel; level >= t.deepestLevel; level-- {
 		distThreshold := cs.minDistance() + math.Pow(2, float64(level))
-		level -= 1
 
-		cs, err = cs.child(query, distThreshold, level, store)
+		cs, err = cs.child(query, distThreshold, level-1, store)
 		if err != nil {
 			return
 		}
