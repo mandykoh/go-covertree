@@ -6,18 +6,6 @@ func coverSetWithItem(item, query Item) coverSet {
 	return coverSet{itemWithDistanceForQuery(item, query)}
 }
 
-func (cs coverSet) Len() int {
-	return len(cs)
-}
-
-func (cs coverSet) Less(i, j int) bool {
-	return cs[i].Distance <= cs[j].Distance
-}
-
-func (cs coverSet) Swap(i, j int) {
-	cs[i], cs[j] = cs[j], cs[i]
-}
-
 func (cs coverSet) child(item Item, distThreshold float64, childLevel int, store Store) (child coverSet, err error) {
 	for _, csItem := range cs {
 
@@ -41,15 +29,30 @@ func (cs coverSet) child(item Item, distThreshold float64, childLevel int, store
 	return
 }
 
-func (cs coverSet) minDistance() float64 {
-	minDist := cs[0].Distance
+func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
+	mins := make([]ItemWithDistance, maxItems, maxItems)
 
-	for i := 1; i < len(cs); i++ {
-		dist := cs[i].Distance
-		if dist < minDist {
-			minDist = dist
+	for i := 0; i < len(cs); i++ {
+		if cs[i].Distance > maxDist {
+			continue
+		}
+
+		for j := 0; j < len(mins); j++ {
+			if mins[j].Item == nil || cs[i].Distance < mins[j].Distance {
+				for k := len(mins) - 1; k > j; k-- {
+					mins[k] = mins[k-1]
+				}
+				mins[j] = cs[i]
+				break
+			}
 		}
 	}
 
-	return minDist
+	for i := len(mins) - 1; i >= 0; i-- {
+		if mins[i].Item != nil {
+			return mins[:i+1]
+		}
+	}
+
+	return nil
 }

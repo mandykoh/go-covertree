@@ -37,7 +37,7 @@ func TestComparisonToLinearSearch(t *testing.T) {
 	fmt.Println("Seed:", seed)
 	rand.Seed(seed)
 
-	points := randomPoints(1000)
+	points := randomPoints(100000)
 
 	fmt.Printf("Inserting %d points\n", len(points))
 	err := insertPoints(points, tree, store)
@@ -60,11 +60,15 @@ func TestComparisonToLinearSearch(t *testing.T) {
 		resetDistanceCalls()
 
 		startTime := time.Now()
-		results, err := tree.FindNearest(&query, store)
+		results, err := tree.FindNearest(&query, store, 2, 100)
 		finishTime := time.Now()
 
 		if err != nil {
 			t.Fatalf("Error querying tree: %v", err)
+		}
+
+		if len(results) == 0 {
+			t.Fatalf("Expected some results but got none")
 		}
 
 		coverTreeNearest := results[0]

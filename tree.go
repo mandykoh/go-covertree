@@ -2,7 +2,6 @@ package covertree
 
 import (
 	"math"
-	"sort"
 	"sync"
 )
 
@@ -13,20 +12,24 @@ type Tree struct {
 	mutex        sync.Mutex
 }
 
-func (t *Tree) FindNearest(query Item, store Store) (results []ItemWithDistance, err error) {
+func (t *Tree) FindNearest(query Item, store Store, maxItems int, maxDistance float64) (results []ItemWithDistance, err error) {
 	cs := coverSetWithItem(t.root, query)
 
 	for level := t.rootLevel; level >= t.deepestLevel; level-- {
-		distThreshold := cs.minDistance() + distanceForLevel(level)
+		distThreshold := distanceForLevel(level)
+
+		closest := cs.closest(maxItems, maxDistance)
+		if len(closest) > 0 {
+			distThreshold += closest[len(closest)-1].Distance
+		}
 
 		cs, err = cs.child(query, distThreshold, level-1, store)
-		if err != nil {
+		if err != nil || len(cs) == 0 {
 			return
 		}
 	}
 
-	sort.Sort(cs)
-	return cs, nil
+	return cs.closest(maxItems, maxDistance), nil
 }
 
 func (t *Tree) Insert(item Item, store Store) error {
