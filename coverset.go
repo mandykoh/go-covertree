@@ -6,6 +6,18 @@ func coverSetWithItem(item, query Item) coverSet {
 	return coverSet{itemWithDistanceForQuery(item, query)}
 }
 
+func (cs coverSet) Len() int {
+	return len(cs)
+}
+
+func (cs coverSet) Less(i, j int) bool {
+	return cs[i].Distance <= cs[j].Distance
+}
+
+func (cs coverSet) Swap(i, j int) {
+	cs[i], cs[j] = cs[j], cs[i]
+}
+
 func (cs coverSet) child(item Item, distThreshold float64, childLevel int, store Store) (child coverSet, err error) {
 	for _, csItem := range cs {
 

@@ -2,6 +2,7 @@ package covertree
 
 import (
 	"math"
+	"sort"
 	"sync"
 )
 
@@ -24,6 +25,7 @@ func (t *Tree) FindNearest(query Item, store Store) (results []ItemWithDistance,
 		}
 	}
 
+	sort.Sort(cs)
 	return cs, nil
 }
 
