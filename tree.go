@@ -12,7 +12,7 @@ type Tree struct {
 	mutex        sync.Mutex
 }
 
-func (t *Tree) FindNearest(query Item, store Store) (results []Item, err error) {
+func (t *Tree) FindNearest(query Item, store Store) (results []ItemWithDistance, err error) {
 	cs := coverSetWithItem(t.root, query)
 
 	for level := t.rootLevel; level >= t.deepestLevel; level-- {
@@ -24,10 +24,7 @@ func (t *Tree) FindNearest(query Item, store Store) (results []Item, err error) 
 		}
 	}
 
-	for i := range cs {
-		results = append(results, cs[i].item)
-	}
-	return
+	return cs, nil
 }
 
 func (t *Tree) Insert(item Item, store Store) error {
@@ -46,7 +43,7 @@ func (t *Tree) Insert(item Item, store Store) error {
 
 	// Tree only has a root at infinity - move root to appropriate level for the new item
 	if t.rootLevel == math.MaxInt32 {
-		t.rootLevel = levelForDistance(cs[0].distance)
+		t.rootLevel = levelForDistance(cs[0].Distance)
 		t.deepestLevel = t.rootLevel
 	}
 
@@ -68,7 +65,7 @@ func (t *Tree) Insert(item Item, store Store) error {
 
 			// No parent found - re-parent the tree with the new item
 			cs := coverSetWithItem(item, t.root)
-			newRootLevel := levelForDistance(cs[0].distance)
+			newRootLevel := levelForDistance(cs[0].Distance)
 
 			_, err = insert(t.root, cs, newRootLevel, store)
 			if err == nil {
@@ -105,8 +102,8 @@ func insert(item Item, coverSet coverSet, level int, store Store) (parentFoundAt
 
 		// No parent was found among the children - look for a suitable parent at this level
 		for _, csItem := range coverSet {
-			if csItem.distance <= distThreshold {
-				err := store.Save(item, csItem.item, level-1)
+			if csItem.Distance <= distThreshold {
+				err := store.Save(item, csItem.Item, level-1)
 				return level, err
 			}
 		}

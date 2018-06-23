@@ -45,7 +45,7 @@ func TestComparisonToLinearSearch(t *testing.T) {
 		t.Fatalf("Error inserting point: %v", err)
 	}
 
-	nodeCount := traverseTree(tree.root, tree.rootLevel, 0, store, false)
+	nodeCount := traverseTree(tree, store, false)
 	fmt.Printf("Found %d nodes in tree\n", nodeCount)
 	if expected := len(points); nodeCount != expected {
 		t.Fatalf("Expected %d nodes in tree but found %d", expected, nodeCount)
@@ -67,14 +67,14 @@ func TestComparisonToLinearSearch(t *testing.T) {
 			t.Fatalf("Error querying tree: %v", err)
 		}
 
-		coverTreeNearest := results[0].(*Point)
+		coverTreeNearest := results[0]
 		coverTreeDistanceCalls := getDistanceCalls()
 
 		fmt.Printf("Cover Tree FindNearest took %d distance comparisons, %dms\n", coverTreeDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 
 		for _, r := range results {
-			point := *(r.(*Point))
-			fmt.Printf("Cover Tree FindNearest: %v (distance %g)\n", point, r.Distance(&query))
+			point := *(r.Item.(*Point))
+			fmt.Printf("Cover Tree FindNearest: %v (distance %g)\n", point, r.Distance)
 		}
 
 		resetDistanceCalls()
@@ -104,8 +104,11 @@ func TestComparisonToLinearSearch(t *testing.T) {
 		fmt.Printf("Linear FindNearest took %d distance comparisons, %dms\n", linearSearchDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 		fmt.Printf("Linear FindNearest: %v (distance %g)\n", *linearSearchNearest, linearSearchNearestDist)
 
-		if linearSearchNearest != coverTreeNearest {
-			t.Errorf("Expected nearest point to %v to be %v but got %v", query, *linearSearchNearest, *coverTreeNearest)
+		if linearSearchNearest != coverTreeNearest.Item {
+			t.Errorf("Expected nearest point to %v to be %v but got %v", query, *linearSearchNearest, *coverTreeNearest.Item.(*Point))
+		}
+		if linearSearchNearestDist != coverTreeNearest.Distance {
+			t.Errorf("Expected distance to nearest point to %v to be %v but got %v", query, linearSearchNearestDist, coverTreeNearest.Distance)
 		}
 		if coverTreeDistanceCalls >= linearSearchDistanceCalls {
 			t.Errorf("Expected cover tree search to require fewer than %d distance comparisons (linear search) but got %d", linearSearchDistanceCalls, coverTreeDistanceCalls)
@@ -197,7 +200,7 @@ func resetDistanceCalls() {
 	atomic.StoreInt32(&distanceCalls, 0)
 }
 
-func traverseTree(item Item, level int, indentLevel int, store *InMemoryStore, print bool) (nodeCount int) {
+func traverseNodes(item Item, level int, indentLevel int, store *InMemoryStore, print bool) (nodeCount int) {
 	if print {
 		fmt.Printf("%4d: ", level)
 		for i := 0; i < indentLevel; i++ {
@@ -222,9 +225,13 @@ func traverseTree(item Item, level int, indentLevel int, store *InMemoryStore, p
 		l := levels[i]
 		children, _ := store.Load(item, l)
 		for _, c := range children {
-			nodeCount += traverseTree(c, l, indentLevel+1, store, print)
+			nodeCount += traverseNodes(c, l, indentLevel+1, store, print)
 		}
 	}
 
 	return
+}
+
+func traverseTree(tree *Tree, store *InMemoryStore, print bool) (nodeCount int) {
+	return traverseNodes(tree.root, tree.rootLevel, 0, store, print)
 }
