@@ -6,8 +6,8 @@ func coverSetWithItem(item, query Item) coverSet {
 	return coverSet{coverSetItemForQuery(item, query)}
 }
 
-func (cs *coverSet) child(item Item, distThreshold float64, childLevel int, store Store) (child coverSet, err error) {
-	for _, csItem := range *cs {
+func (cs coverSet) child(item Item, distThreshold float64, childLevel int, store Store) (child coverSet, err error) {
+	for _, csItem := range cs {
 
 		if csItem.distance <= distThreshold {
 			child = append(child, csItem)
