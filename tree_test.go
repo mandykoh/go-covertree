@@ -6,24 +6,18 @@ import (
 	"math/rand"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
-var distanceCalls = 0
+var distanceCalls = int32(0)
 
 type Point [3]float64
 
-func RandomPoint(scale float64) Point {
-	p := Point{}
-	for i := 0; i < len(p); i++ {
-		p[i] = rand.Float64() * scale
-	}
-	return p
-}
-
 func (p Point) Distance(other Item) float64 {
-	distanceCalls++
+	atomic.AddInt32(&distanceCalls, 1)
+
 	op := other.(*Point)
 
 	total := 0.0
@@ -35,8 +29,176 @@ func (p Point) Distance(other Item) float64 {
 	return math.Sqrt(total)
 }
 
-func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore, actuallyPrint bool) (count int) {
-	if actuallyPrint {
+func TestComparisonToLinearSearch(t *testing.T) {
+	store := NewInMemoryStore()
+	tree := &Tree{}
+
+	seed := time.Now().UnixNano()
+	fmt.Println("Seed:", seed)
+	rand.Seed(seed)
+
+	points := randomPoints(1000)
+
+	fmt.Printf("Inserting %d points\n", len(points))
+	err := insertPoints(points, tree, store)
+	if err != nil {
+		t.Fatalf("Error inserting point: %v", err)
+	}
+
+	nodeCount := traverseTree(tree.root, tree.rootLevel, 0, store, false)
+	fmt.Printf("Found %d nodes in tree\n", nodeCount)
+	if expected := len(points); nodeCount != expected {
+		t.Fatalf("Expected %d nodes in tree but found %d", expected, nodeCount)
+	}
+
+	for n := 0; n < 10; n++ {
+		fmt.Println()
+
+		query := randomPoint(1000)
+		fmt.Printf("Query point %v\n", query)
+
+		resetDistanceCalls()
+
+		startTime := time.Now()
+		results, err := tree.FindNearest(&query, store)
+		finishTime := time.Now()
+
+		if err != nil {
+			t.Fatalf("Error querying tree: %v", err)
+		}
+
+		coverTreeNearest := results[0].(*Point)
+		coverTreeDistanceCalls := getDistanceCalls()
+
+		fmt.Printf("Cover Tree FindNearest took %d distance comparisons, %dms\n", coverTreeDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
+
+		for _, r := range results {
+			point := *(r.(*Point))
+			fmt.Printf("Cover Tree FindNearest: %v (distance %g)\n", point, r.Distance(&query))
+		}
+
+		resetDistanceCalls()
+
+		startTime = time.Now()
+
+		var linearSearchNearest *Point
+		var linearSearchNearestDist float64
+		for i := range points {
+			if linearSearchNearest == nil {
+				linearSearchNearest = &points[i]
+				linearSearchNearestDist = query.Distance(linearSearchNearest)
+
+			} else {
+				dist := query.Distance(&points[i])
+				if dist < linearSearchNearestDist {
+					linearSearchNearest = &points[i]
+					linearSearchNearestDist = dist
+				}
+			}
+		}
+
+		finishTime = time.Now()
+
+		linearSearchDistanceCalls := getDistanceCalls()
+
+		fmt.Printf("Linear FindNearest took %d distance comparisons, %dms\n", linearSearchDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
+		fmt.Printf("Linear FindNearest: %v (distance %g)\n", *linearSearchNearest, linearSearchNearestDist)
+
+		if linearSearchNearest != coverTreeNearest {
+			t.Errorf("Expected nearest point to %v to be %v but got %v", query, *linearSearchNearest, *coverTreeNearest)
+		}
+		if coverTreeDistanceCalls >= linearSearchDistanceCalls {
+			t.Errorf("Expected cover tree search to require fewer than %d distance comparisons (linear search) but got %d", linearSearchDistanceCalls, coverTreeDistanceCalls)
+		}
+	}
+}
+
+func getDistanceCalls() int32 {
+	return atomic.LoadInt32(&distanceCalls)
+}
+
+func insertPoints(points []Point, tree *Tree, store Store) (err error) {
+	const insertThreads = 8
+
+	resetDistanceCalls()
+
+	pointsToInsert := make(chan *Point)
+	insertCount := int32(0)
+
+	errored := int32(0)
+
+	treeReady := sync.WaitGroup{}
+	treeReady.Add(insertThreads)
+
+	for i := 0; i < insertThreads; i++ {
+		go func() {
+			for {
+				p, ok := <-pointsToInsert
+				if !ok {
+					break
+				}
+
+				insertErr := tree.Insert(p, store)
+				if insertErr != nil {
+					if atomic.SwapInt32(&errored, 1) == 0 {
+						err = insertErr
+					}
+					break
+				}
+
+				if inserted := atomic.AddInt32(&insertCount, 1); inserted%100000 == 0 {
+					fmt.Printf("%d to go\n", len(points)-int(inserted))
+				}
+			}
+
+			treeReady.Done()
+		}()
+	}
+
+	startTime := time.Now()
+
+	for i := range points {
+		if atomic.LoadInt32(&errored) != 0 {
+			break
+		}
+		pointsToInsert <- &points[i]
+	}
+	close(pointsToInsert)
+	treeReady.Wait()
+
+	finishTime := time.Now()
+
+	fmt.Printf("Building tree took %d distance calls, %dms\n", getDistanceCalls(), finishTime.Sub(startTime)/time.Millisecond)
+	return nil
+}
+
+func randomPoint(scale float64) (point Point) {
+	for i := 0; i < len(point); i++ {
+		point[i] = rand.Float64() * scale
+	}
+	return point
+}
+
+func randomPoints(count int) (points []Point) {
+	pointsMap := make(map[Point]bool, count)
+	for len(pointsMap) < count {
+		val := randomPoint(1000)
+		pointsMap[val] = true
+	}
+
+	for k := range pointsMap {
+		points = append(points, k)
+	}
+
+	return
+}
+
+func resetDistanceCalls() {
+	atomic.StoreInt32(&distanceCalls, 0)
+}
+
+func traverseTree(item Item, level int, indentLevel int, store *InMemoryStore, print bool) (nodeCount int) {
+	if print {
 		fmt.Printf("%4d: ", level)
 		for i := 0; i < indentLevel; i++ {
 			fmt.Print("..")
@@ -48,7 +210,7 @@ func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore, actu
 		fmt.Println(item)
 	}
 
-	count = 1
+	nodeCount = 1
 
 	var levels []int
 	for k := range store.levelsFor(item) {
@@ -60,149 +222,9 @@ func PrintTree(item Item, level int, indentLevel int, store *InMemoryStore, actu
 		l := levels[i]
 		children, _ := store.Load(item, l)
 		for _, c := range children {
-			count += PrintTree(c, l, indentLevel+1, store, actuallyPrint)
+			nodeCount += traverseTree(c, l, indentLevel+1, store, print)
 		}
 	}
 
 	return
-}
-
-//func TestSomething(t *testing.T) {
-//
-//	store := NewInMemoryStore()
-//
-//	root := &Point{10, 10, 10}
-//
-//	tree := &Tree{}
-//	tree.Insert(root, store)
-//
-//	for i := 1; i < 20; i++ {
-//		val := float64(i)/10.0 + 1
-//		err := tree.Insert(&Point{val, val, val}, store)
-//		fmt.Println("Result", err)
-//	}
-//
-//	fmt.Println(tree.Insert(&Point{1000, 1000, 1000}, store))
-//
-//	PrintTree(tree.root, 10, 0, store)
-//
-//	distanceCalls = 0
-//
-//	query := &Point{6.3, 6.3, 6.3}
-//	results, _ := tree.FindNearest(query, store)
-//
-//	fmt.Printf("FindNearest took %d distance calls\n", distanceCalls)
-//
-//	for _, r := range results {
-//		fmt.Printf("Nearest: %v (distance %.1f)\n", r, r.Distance(query))
-//	}
-//}
-
-func TestRandom(t *testing.T) {
-	store := NewInMemoryStore()
-	tree := &Tree{}
-
-	seed := time.Now().UnixNano()
-	fmt.Println("Seed:", seed)
-	rand.Seed(seed)
-
-	var values []Point
-	{
-		valuesMap := make(map[Point]bool)
-		for i := 0; i < 100000; i++ {
-			val := RandomPoint(1000)
-			valuesMap[val] = true
-		}
-
-		for k := range valuesMap {
-			values = append(values, k)
-		}
-	}
-
-	fmt.Printf("Inserting %d values\n", len(values))
-
-	distanceCalls = 0
-	startTime := time.Now()
-
-	pointsToInsert := make(chan *Point)
-
-	const insertThreads = 8
-
-	treeReady := sync.WaitGroup{}
-	treeReady.Add(insertThreads)
-	for i := 0; i < insertThreads; i++ {
-		go func() {
-			for {
-				p, ok := <-pointsToInsert
-				if !ok {
-					break
-				}
-
-				err := tree.Insert(p, store)
-				if err != nil {
-					fmt.Printf("Error inserting %v: %v\n", values[i], err)
-				}
-			}
-
-			treeReady.Done()
-		}()
-	}
-
-	for i := range values {
-		pointsToInsert <- &values[i]
-	}
-	close(pointsToInsert)
-	treeReady.Wait()
-
-	finishTime := time.Now()
-
-	fmt.Printf("Building tree took %d distance calls, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
-
-	nodeCount := PrintTree(tree.root, tree.rootLevel, 0, store, false)
-	fmt.Printf("Found %d nodes in tree\n", nodeCount)
-
-	for n := 0; n < 5; n++ {
-		fmt.Println()
-
-		query := RandomPoint(1000)
-		fmt.Printf("Query point %v\n", query)
-
-		distanceCalls = 0
-		startTime = time.Now()
-
-		results, _ := tree.FindNearest(&query, store)
-
-		finishTime = time.Now()
-
-		fmt.Printf("Cover Tree FindNearest took %d distance comparisons, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
-
-		for _, r := range results {
-			point := *(r.(*Point))
-			fmt.Printf("Cover Tree FindNearest: %v (distance %g)\n", point, r.Distance(&query))
-		}
-
-		distanceCalls = 0
-		startTime = time.Now()
-
-		var nearest *Point
-		var nearestDist float64
-		for i := range values {
-			if nearest == nil {
-				nearest = &values[i]
-				nearestDist = query.Distance(nearest)
-
-			} else {
-				dist := query.Distance(&values[i])
-				if dist < nearestDist {
-					nearest = &values[i]
-					nearestDist = dist
-				}
-			}
-		}
-
-		finishTime = time.Now()
-
-		fmt.Printf("Linear FindNearest took %d distance comparisons, %dms\n", distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
-		fmt.Printf("Linear FindNearest: %v (distance %g)\n", *nearest, nearestDist)
-	}
 }
