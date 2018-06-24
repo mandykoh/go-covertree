@@ -18,7 +18,14 @@ func (t *Tree) FindNearest(query Item, store Store, maxResults int, maxDistance 
 
 		closest := cs.closest(maxResults, maxDistance)
 		if len(closest) > 0 {
-			distThreshold += closest[len(closest)-1].Distance
+			closestDist := closest[len(closest)-1].Distance
+			if len(closest) < maxResults {
+				distThreshold += math.Max(maxDistance, closestDist)
+			} else {
+				distThreshold += closestDist
+			}
+		} else {
+			distThreshold += maxDistance
 		}
 
 		cs, err = cs.child(query, distThreshold, level-1, store)
