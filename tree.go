@@ -2,14 +2,12 @@ package covertree
 
 import (
 	"math"
-	"sync"
 )
 
 type Tree struct {
 	root         Item
 	rootLevel    int
 	deepestLevel int
-	mutex        sync.Mutex
 }
 
 func (t *Tree) FindNearest(query Item, store Store, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
@@ -33,14 +31,12 @@ func (t *Tree) FindNearest(query Item, store Store, maxResults int, maxDistance 
 }
 
 func (t *Tree) Insert(item Item, store Store) error {
-	t.mutex.Lock()
 
 	// Tree is empty - add item as the new root at infinity
 	if t.root == nil {
 		t.root = item
 		t.rootLevel = math.MaxInt32
 		t.deepestLevel = t.rootLevel
-		t.mutex.Unlock()
 		return nil
 	}
 
@@ -52,12 +48,9 @@ func (t *Tree) Insert(item Item, store Store) error {
 		t.deepestLevel = t.rootLevel
 	}
 
-	t.mutex.Unlock()
-
 	parentFoundAtLevel, err := insert(item, cs, t.rootLevel, store)
 
 	if err == nil {
-		t.mutex.Lock()
 
 		if parentFoundAtLevel < math.MaxInt32 {
 
@@ -78,8 +71,6 @@ func (t *Tree) Insert(item Item, store Store) error {
 				t.rootLevel = newRootLevel
 			}
 		}
-
-		t.mutex.Unlock()
 	}
 
 	return err

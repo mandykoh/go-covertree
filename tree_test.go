@@ -5,7 +5,6 @@ import (
 	"math"
 	"math/rand"
 	"sort"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -33,7 +32,8 @@ func TestComparisonToLinearSearch(t *testing.T) {
 	store := NewInMemoryStore()
 	tree := &Tree{}
 
-	seed := time.Now().UnixNano()
+	//seed := time.Now().UnixNano()
+	seed := int64(1529838727348585100)
 	fmt.Println("Seed:", seed)
 	rand.Seed(seed)
 
@@ -179,54 +179,21 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 	return results, linearSearchDistanceCalls
 }
 
-func insertPoints(points []Point, tree *Tree, store Store) (err error) {
-	const insertThreads = 8
-
+func insertPoints(points []Point, tree *Tree, store Store) error {
 	resetDistanceCalls()
-
-	pointsToInsert := make(chan *Point)
-	insertCount := int32(0)
-
-	errored := int32(0)
-
-	treeReady := sync.WaitGroup{}
-	treeReady.Add(insertThreads)
-
-	for i := 0; i < insertThreads; i++ {
-		go func() {
-			for {
-				p, ok := <-pointsToInsert
-				if !ok {
-					break
-				}
-
-				insertErr := tree.Insert(p, store)
-				if insertErr != nil {
-					if atomic.SwapInt32(&errored, 1) == 0 {
-						err = insertErr
-					}
-					break
-				}
-
-				if inserted := atomic.AddInt32(&insertCount, 1); inserted%100000 == 0 {
-					fmt.Printf("%d to go\n", len(points)-int(inserted))
-				}
-			}
-
-			treeReady.Done()
-		}()
-	}
 
 	startTime := time.Now()
 
 	for i := range points {
-		if atomic.LoadInt32(&errored) != 0 {
-			break
+		err := tree.Insert(&points[i], store)
+		if err != nil {
+			return err
 		}
-		pointsToInsert <- &points[i]
+
+		if i%100000 == 0 {
+			fmt.Printf("%d to go\n", len(points)-i)
+		}
 	}
-	close(pointsToInsert)
-	treeReady.Wait()
 
 	finishTime := time.Now()
 
