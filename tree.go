@@ -12,13 +12,13 @@ type Tree struct {
 	mutex        sync.Mutex
 }
 
-func (t *Tree) FindNearest(query Item, store Store, maxItems int, maxDistance float64) (results []ItemWithDistance, err error) {
+func (t *Tree) FindNearest(query Item, store Store, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
 	cs := coverSetWithItem(t.root, query)
 
 	for level := t.rootLevel; level >= t.deepestLevel; level-- {
 		distThreshold := distanceForLevel(level)
 
-		closest := cs.closest(maxItems, maxDistance)
+		closest := cs.closest(maxResults, maxDistance)
 		if len(closest) > 0 {
 			distThreshold += closest[len(closest)-1].Distance
 		}
@@ -29,7 +29,7 @@ func (t *Tree) FindNearest(query Item, store Store, maxItems int, maxDistance fl
 		}
 	}
 
-	return cs.closest(maxItems, maxDistance), nil
+	return cs.closest(maxResults, maxDistance), nil
 }
 
 func (t *Tree) Insert(item Item, store Store) error {

@@ -37,7 +37,7 @@ func TestComparisonToLinearSearch(t *testing.T) {
 	fmt.Println("Seed:", seed)
 	rand.Seed(seed)
 
-	points := randomPoints(100000)
+	points := randomPoints(10000)
 
 	fmt.Printf("Inserting %d points\n", len(points))
 	err := insertPoints(points, tree, store)
@@ -51,77 +51,128 @@ func TestComparisonToLinearSearch(t *testing.T) {
 		t.Fatalf("Expected %d nodes in tree but found %d", expected, nodeCount)
 	}
 
-	for n := 0; n < 10; n++ {
-		fmt.Println()
+	compareWithLinearSearch := func(iterations int, maxResults int, maxDistance float64) {
+		for n := 0; n < iterations; n++ {
+			fmt.Println()
 
-		query := randomPoint(1000)
-		fmt.Printf("Query point %v\n", query)
+			query := randomPoint(1000)
+			fmt.Printf("Query point %v\n", query)
 
-		resetDistanceCalls()
+			resetDistanceCalls()
 
-		startTime := time.Now()
-		results, err := tree.FindNearest(&query, store, 2, 100)
-		finishTime := time.Now()
+			startTime := time.Now()
+			coverTreeResults, err := tree.FindNearest(&query, store, maxResults, maxDistance)
+			finishTime := time.Now()
 
-		if err != nil {
-			t.Fatalf("Error querying tree: %v", err)
-		}
+			if err != nil {
+				t.Fatalf("Error querying tree: %v", err)
+			}
 
-		if len(results) == 0 {
-			t.Fatalf("Expected some results but got none")
-		}
+			coverTreeDistanceCalls := getDistanceCalls()
 
-		coverTreeNearest := results[0]
-		coverTreeDistanceCalls := getDistanceCalls()
+			fmt.Printf("Cover Tree FindNearest took %d distance comparisons, %dms\n", coverTreeDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
+			for _, r := range coverTreeResults {
+				point := *(r.Item.(*Point))
+				fmt.Printf("Cover Tree FindNearest: %v (distance %g)\n", point, r.Distance)
+			}
 
-		fmt.Printf("Cover Tree FindNearest took %d distance comparisons, %dms\n", coverTreeDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
+			linearSearchResults, linearSearchDistanceCalls := linearSearch(&query, points, maxResults, maxDistance)
 
-		for _, r := range results {
-			point := *(r.Item.(*Point))
-			fmt.Printf("Cover Tree FindNearest: %v (distance %g)\n", point, r.Distance)
-		}
+			expectSameResults(t, query, coverTreeResults, linearSearchResults)
 
-		resetDistanceCalls()
-
-		startTime = time.Now()
-
-		var linearSearchNearest *Point
-		var linearSearchNearestDist float64
-		for i := range points {
-			if linearSearchNearest == nil {
-				linearSearchNearest = &points[i]
-				linearSearchNearestDist = query.Distance(linearSearchNearest)
-
-			} else {
-				dist := query.Distance(&points[i])
-				if dist < linearSearchNearestDist {
-					linearSearchNearest = &points[i]
-					linearSearchNearestDist = dist
-				}
+			if coverTreeDistanceCalls >= linearSearchDistanceCalls {
+				t.Errorf("Expected cover tree search to require fewer than %d distance comparisons (linear search) but got %d", linearSearchDistanceCalls, coverTreeDistanceCalls)
 			}
 		}
+	}
 
-		finishTime = time.Now()
+	t.Run("with nearest neighbour query", func(t *testing.T) {
+		compareWithLinearSearch(5, 1, math.MaxFloat64)
+	})
 
-		linearSearchDistanceCalls := getDistanceCalls()
+	t.Run("with k-nearest neighbour query", func(t *testing.T) {
+		compareWithLinearSearch(5, 8, math.MaxFloat64)
+	})
 
-		fmt.Printf("Linear FindNearest took %d distance comparisons, %dms\n", linearSearchDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
-		fmt.Printf("Linear FindNearest: %v (distance %g)\n", *linearSearchNearest, linearSearchNearestDist)
+	t.Run("with bounded distance query", func(t *testing.T) {
+		compareWithLinearSearch(5, 1, 25)
+	})
 
-		if linearSearchNearest != coverTreeNearest.Item {
-			t.Errorf("Expected nearest point to %v to be %v but got %v", query, *linearSearchNearest, *coverTreeNearest.Item.(*Point))
+	t.Run("with k-nearest bounded distance query", func(t *testing.T) {
+		compareWithLinearSearch(5, 8, 50)
+	})
+}
+
+func expectSameResults(t *testing.T, query Point, actualResults []ItemWithDistance, expectedResults []ItemWithDistance) {
+	if expected, actual := len(expectedResults), len(actualResults); expected != actual {
+		t.Errorf("Expected %d results but got %d instead", expected, actual)
+
+	}
+
+	availableResults := len(expectedResults)
+	if len(actualResults) < availableResults {
+		availableResults = len(actualResults)
+	}
+
+	for i := 0; i < availableResults; i++ {
+		expectedResult := expectedResults[i]
+		actualResult := actualResults[i]
+
+		if expected, actual := expectedResult.Item, actualResult.Item; expected != actual {
+			t.Errorf("Expected nearest point %d to %v to be %v but got %v", i, query, *expected.(*Point), *actual.(*Point))
 		}
-		if linearSearchNearestDist != coverTreeNearest.Distance {
-			t.Errorf("Expected distance to nearest point to %v to be %v but got %v", query, linearSearchNearestDist, coverTreeNearest.Distance)
-		}
-		if coverTreeDistanceCalls >= linearSearchDistanceCalls {
-			t.Errorf("Expected cover tree search to require fewer than %d distance comparisons (linear search) but got %d", linearSearchDistanceCalls, coverTreeDistanceCalls)
+		if expected, actual := expectedResult.Distance, actualResult.Distance; expected != actual {
+			t.Errorf("Expected distance of nearest point %d to %v to be %v but got %v", i, query, expected, actual)
 		}
 	}
 }
 
 func getDistanceCalls() int32 {
 	return atomic.LoadInt32(&distanceCalls)
+}
+
+func linearSearch(query *Point, points []Point, maxResults int, maxDistance float64) (results []ItemWithDistance, distanceCallCount int32) {
+	resetDistanceCalls()
+
+	startTime := time.Now()
+
+	results = make([]ItemWithDistance, maxResults, maxResults)
+
+	for i := range points {
+		dist := query.Distance(&points[i])
+		if dist > maxDistance {
+			continue
+		}
+
+		for j := 0; j < len(results); j++ {
+			if results[j].Item == nil || dist < results[j].Distance {
+				for k := len(results) - 1; k > j; k-- {
+					results[k] = results[k-1]
+				}
+				results[j].Item = &points[i]
+				results[j].Distance = dist
+				break
+			}
+		}
+	}
+
+	lastNonNil := len(results) - 1
+	for lastNonNil >= 0 && results[lastNonNil].Item == nil {
+		lastNonNil--
+	}
+	results = results[:lastNonNil+1]
+
+	finishTime := time.Now()
+
+	linearSearchDistanceCalls := getDistanceCalls()
+
+	fmt.Printf("Linear FindNearest took %d distance comparisons, %dms\n", linearSearchDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
+
+	for _, r := range results {
+		fmt.Printf("Linear FindNearest: %v (distance %g)\n", *r.Item.(*Point), r.Distance)
+	}
+
+	return results, linearSearchDistanceCalls
 }
 
 func insertPoints(points []Point, tree *Tree, store Store) (err error) {
