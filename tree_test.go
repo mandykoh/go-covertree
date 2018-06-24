@@ -206,7 +206,10 @@ func randomPoints(count int) (points []Point) {
 	pointsMap := make(map[Point]bool, count)
 	for len(pointsMap) < count {
 		val := randomPoint(1000)
-		pointsMap[val] = true
+		if _, exists := pointsMap[val]; !exists {
+			pointsMap[val] = true
+			points = append(points, val)
+		}
 	}
 
 	return
