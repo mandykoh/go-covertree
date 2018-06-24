@@ -5,17 +5,16 @@ import (
 	"math"
 	"math/rand"
 	"sort"
-	"sync/atomic"
 	"testing"
 	"time"
 )
 
-var distanceCalls = int32(0)
+var distanceCalls = 0
 
 type Point [3]float64
 
 func (p Point) Distance(other Item) float64 {
-	atomic.AddInt32(&distanceCalls, 1)
+	distanceCalls++
 
 	op := other.(*Point)
 
@@ -32,8 +31,7 @@ func TestComparisonToLinearSearch(t *testing.T) {
 	store := NewInMemoryStore()
 	tree := &Tree{}
 
-	//seed := time.Now().UnixNano()
-	seed := int64(1529838727348585100)
+	seed := time.Now().UnixNano()
 	fmt.Println("Seed:", seed)
 	rand.Seed(seed)
 
@@ -131,11 +129,11 @@ func expectSameResults(t *testing.T, query Point, actualResults []ItemWithDistan
 	}
 }
 
-func getDistanceCalls() int32 {
-	return atomic.LoadInt32(&distanceCalls)
+func getDistanceCalls() int {
+	return distanceCalls
 }
 
-func linearSearch(query *Point, points []Point, maxResults int, maxDistance float64) (results []ItemWithDistance, distanceCallCount int32) {
+func linearSearch(query *Point, points []Point, maxResults int, maxDistance float64) (results []ItemWithDistance, distanceCallCount int) {
 	resetDistanceCalls()
 
 	startTime := time.Now()
@@ -189,10 +187,6 @@ func insertPoints(points []Point, tree *Tree, store Store) error {
 		if err != nil {
 			return err
 		}
-
-		if i%100000 == 0 {
-			fmt.Printf("%d to go\n", len(points)-i)
-		}
 	}
 
 	finishTime := time.Now()
@@ -215,15 +209,11 @@ func randomPoints(count int) (points []Point) {
 		pointsMap[val] = true
 	}
 
-	for k := range pointsMap {
-		points = append(points, k)
-	}
-
 	return
 }
 
 func resetDistanceCalls() {
-	atomic.StoreInt32(&distanceCalls, 0)
+	distanceCalls = 0
 }
 
 func traverseNodes(item Item, level int, indentLevel int, store *InMemoryStore, print bool) (nodeCount int) {
