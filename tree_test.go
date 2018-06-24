@@ -52,6 +52,8 @@ func TestComparisonToLinearSearch(t *testing.T) {
 	}
 
 	compareWithLinearSearch := func(iterations int, maxResults int, maxDistance float64) {
+		t.Helper()
+
 		for n := 0; n < iterations; n++ {
 			fmt.Println()
 
@@ -104,6 +106,8 @@ func TestComparisonToLinearSearch(t *testing.T) {
 }
 
 func expectSameResults(t *testing.T, query Point, actualResults []ItemWithDistance, expectedResults []ItemWithDistance) {
+	t.Helper()
+
 	if expected, actual := len(expectedResults), len(actualResults); expected != actual {
 		t.Errorf("Expected %d results but got %d instead", expected, actual)
 
