@@ -48,11 +48,9 @@ func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
 		}
 	}
 
-	for i := len(mins) - 1; i >= 0; i-- {
-		if mins[i].Item != nil {
-			return mins[:i+1]
-		}
+	lastNonNil := len(mins) - 1
+	for lastNonNil >= 0 && mins[lastNonNil].Item == nil {
+		lastNonNil--
 	}
-
-	return nil
+	return mins[:lastNonNil+1]
 }
