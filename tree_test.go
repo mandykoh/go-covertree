@@ -56,7 +56,7 @@ func TestComparisonToLinearSearch(t *testing.T) {
 			fmt.Println()
 
 			query := randomPoint(1000)
-			fmt.Printf("Query point %v\n", query)
+			fmt.Printf("Query point %v (maxResults: %d, maxDistance: %g)\n", query, maxResults, maxDistance)
 
 			resetDistanceCalls()
 
@@ -87,19 +87,19 @@ func TestComparisonToLinearSearch(t *testing.T) {
 	}
 
 	t.Run("with nearest neighbour query", func(t *testing.T) {
-		compareWithLinearSearch(5, 1, math.MaxFloat64)
+		compareWithLinearSearch(10, 1, math.MaxFloat64)
 	})
 
 	t.Run("with k-nearest neighbour query", func(t *testing.T) {
-		compareWithLinearSearch(5, 8, math.MaxFloat64)
+		compareWithLinearSearch(10, 8, math.MaxFloat64)
 	})
 
 	t.Run("with bounded distance query", func(t *testing.T) {
-		compareWithLinearSearch(5, 1, 25)
+		compareWithLinearSearch(10, 1, 25)
 	})
 
 	t.Run("with k-nearest bounded distance query", func(t *testing.T) {
-		compareWithLinearSearch(5, 8, 50)
+		compareWithLinearSearch(10, 8, 50)
 	})
 }
 
