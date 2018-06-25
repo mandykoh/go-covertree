@@ -29,6 +29,35 @@ func (p Point) Distance(other Item) float64 {
 
 func TestTree(t *testing.T) {
 
+	t.Run("Insert()", func(t *testing.T) {
+
+		t.Run("returns the original item when inserting a duplicate", func(t *testing.T) {
+			store := NewInMemoryStore()
+			tree := &Tree{}
+
+			p1 := randomPoint()
+			inserted, err := tree.Insert(&p1, store)
+			if err != nil {
+				t.Fatalf("Error inserting point into tree: %v", err)
+			}
+
+			p2 := p1
+			inserted, err = tree.Insert(&p2, store)
+			if err != nil {
+				t.Fatalf("Error inserting point into tree: %v", err)
+			}
+
+			nodeCount := traverseTree(tree, store, false)
+
+			if expected, actual := 1, nodeCount; expected != actual {
+				t.Errorf("Expected only one node in tree after inserting duplicate but found %d", actual)
+			}
+			if expected, actual := &p1, inserted; expected != actual {
+				t.Errorf("Expected duplicate insertion to return original point but got a different point instead")
+			}
+		})
+	})
+
 	t.Run("with randomly populated tree", func(t *testing.T) {
 		store := NewInMemoryStore()
 		tree := &Tree{}
@@ -57,7 +86,7 @@ func TestTree(t *testing.T) {
 			for n := 0; n < iterations; n++ {
 				fmt.Println()
 
-				query := randomPoint(1000)
+				query := randomPoint()
 				fmt.Printf("Query point %v (maxResults: %d, maxDistance: %g)\n", query, maxResults, maxDistance)
 
 				resetPointDistanceCalls()
@@ -188,7 +217,7 @@ func insertPoints(points []Point, tree *Tree, store Store) error {
 	startTime := time.Now()
 
 	for i := range points {
-		err := tree.Insert(&points[i], store)
+		_, err := tree.Insert(&points[i], store)
 		if err != nil {
 			return err
 		}
@@ -200,9 +229,9 @@ func insertPoints(points []Point, tree *Tree, store Store) error {
 	return nil
 }
 
-func randomPoint(scale float64) (point Point) {
+func randomPoint() (point Point) {
 	for i := 0; i < len(point); i++ {
-		point[i] = rand.Float64() * scale
+		point[i] = rand.Float64() * 1000
 	}
 	return point
 }
@@ -210,7 +239,7 @@ func randomPoint(scale float64) (point Point) {
 func randomPoints(count int) (points []Point) {
 	pointsMap := make(map[Point]bool, count)
 	for len(pointsMap) < count {
-		val := randomPoint(1000)
+		val := randomPoint()
 		if _, exists := pointsMap[val]; !exists {
 			pointsMap[val] = true
 			points = append(points, val)
