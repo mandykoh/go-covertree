@@ -84,7 +84,7 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int, store Store) (ins
 	if len(childCoverSet) > 0 {
 
 		// Only one matching child which is at zero distance - item is a duplicate so return the original
-		if len(childCoverSet) == 1 && childCoverSet[0].Distance == 0 {
+		if childCoverSet[0].Distance == 0 {
 			return childCoverSet[0].Item, nil
 		}
 
