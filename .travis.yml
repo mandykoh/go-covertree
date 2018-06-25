@@ -1,0 +1,10 @@
+language: go
+
+go:
+  - 1.x
+install:
+  - go get github.com/golang/dep/cmd/dep
+  - dep ensure
+  - go get github.com/redbubble/go-passe
+  - go install github.com/redbubble/go-passe
+script: go test -v -json -cover ./... | go-passe
