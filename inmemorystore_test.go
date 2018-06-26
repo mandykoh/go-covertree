@@ -22,7 +22,7 @@ func TestInMemoryStore(t *testing.T) {
 		item1 := &dummyItem{"thing1", 123.0}
 		item2 := &dummyItem{"thing2", 234.0}
 
-		s := InMemoryStore{
+		s := inMemoryStore{
 			items: map[Item]map[int][]Item{
 				parent: {
 					7: {item1, item2},

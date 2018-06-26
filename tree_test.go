@@ -33,7 +33,7 @@ func TestTree(t *testing.T) {
 
 		t.Run("returns the original item when inserting a duplicate", func(t *testing.T) {
 			tree := NewInMemoryTree()
-			store := tree.store.(*InMemoryStore)
+			store := tree.store.(*inMemoryStore)
 
 			p1 := randomPoint()
 			inserted, err := tree.Insert(&p1)
@@ -110,7 +110,7 @@ func TestTree(t *testing.T) {
 
 	t.Run("with randomly populated tree", func(t *testing.T) {
 		tree := NewInMemoryTree()
-		store := tree.store.(*InMemoryStore)
+		store := tree.store.(*inMemoryStore)
 
 		seed := time.Now().UnixNano()
 		fmt.Println("Seed:", seed)
@@ -303,7 +303,7 @@ func resetPointDistanceCalls() {
 	pointDistanceCalls = 0
 }
 
-func traverseNodes(item Item, level int, indentLevel int, store *InMemoryStore, print bool) (nodeCount int) {
+func traverseNodes(item Item, level int, indentLevel int, store *inMemoryStore, print bool) (nodeCount int) {
 	if print {
 		fmt.Printf("%4d: ", level)
 		for i := 0; i < indentLevel; i++ {
@@ -335,12 +335,12 @@ func traverseNodes(item Item, level int, indentLevel int, store *InMemoryStore, 
 	return
 }
 
-func traverseTree(tree *Tree, store *InMemoryStore, print bool) (nodeCount int) {
+func traverseTree(tree *Tree, store *inMemoryStore, print bool) (nodeCount int) {
 	return traverseNodes(tree.root, tree.rootLevel, 0, store, print)
 }
 
 type testStore struct {
-	InMemoryStore
+	inMemoryStore
 	savedCount        int
 	savedRoot         Item
 	savedRootLevel    int
@@ -348,7 +348,7 @@ type testStore struct {
 }
 
 func newTestStore() *testStore {
-	return &testStore{InMemoryStore: *newInMemoryStore()}
+	return &testStore{inMemoryStore: *newInMemoryStore()}
 }
 
 func (ts *testStore) SaveTree(root Item, rootLevel, deepestLevel int) error {

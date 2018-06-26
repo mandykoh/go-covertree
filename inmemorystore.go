@@ -1,24 +1,24 @@
 package covertree
 
-type InMemoryStore struct {
+type inMemoryStore struct {
 	items map[Item]map[int][]Item
 }
 
-func newInMemoryStore() *InMemoryStore {
-	return &InMemoryStore{
+func newInMemoryStore() *inMemoryStore {
+	return &inMemoryStore{
 		items: make(map[Item]map[int][]Item),
 	}
 }
 
-func (s *InMemoryStore) LoadChildren(parent Item, level int) (children []Item, err error) {
+func (s *inMemoryStore) LoadChildren(parent Item, level int) (children []Item, err error) {
 	return s.items[parent][level], nil
 }
 
-func (s *InMemoryStore) LoadTree() (root Item, rootLevel, deepestLevel int, err error) {
+func (s *inMemoryStore) LoadTree() (root Item, rootLevel, deepestLevel int, err error) {
 	return nil, 0, 0, nil
 }
 
-func (s *InMemoryStore) SaveChild(child, parent Item, level int) error {
+func (s *inMemoryStore) SaveChild(child, parent Item, level int) error {
 	s.levelsFor(child)
 
 	levels := s.levelsFor(parent)
@@ -33,11 +33,11 @@ func (s *InMemoryStore) SaveChild(child, parent Item, level int) error {
 	return nil
 }
 
-func (s *InMemoryStore) SaveTree(root Item, rootLevel, deepestLevel int) error {
+func (s *inMemoryStore) SaveTree(root Item, rootLevel, deepestLevel int) error {
 	return nil
 }
 
-func (s *InMemoryStore) levelsFor(item Item) map[int][]Item {
+func (s *inMemoryStore) levelsFor(item Item) map[int][]Item {
 	levels, ok := s.items[item]
 	if !ok {
 		levels = make(map[int][]Item)
