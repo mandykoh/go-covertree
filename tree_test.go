@@ -33,16 +33,16 @@ func TestTree(t *testing.T) {
 
 		t.Run("returns the original item when inserting a duplicate", func(t *testing.T) {
 			store := NewInMemoryStore()
-			tree := &Tree{}
+			tree := NewTree(store)
 
 			p1 := randomPoint()
-			inserted, err := tree.Insert(&p1, store)
+			inserted, err := tree.Insert(&p1)
 			if err != nil {
 				t.Fatalf("Error inserting point into tree: %v", err)
 			}
 
 			p2 := p1
-			inserted, err = tree.Insert(&p2, store)
+			inserted, err = tree.Insert(&p2)
 			if err != nil {
 				t.Fatalf("Error inserting point into tree: %v", err)
 			}
@@ -60,7 +60,7 @@ func TestTree(t *testing.T) {
 
 	t.Run("with randomly populated tree", func(t *testing.T) {
 		store := NewInMemoryStore()
-		tree := &Tree{}
+		tree := NewTree(store)
 
 		seed := time.Now().UnixNano()
 		fmt.Println("Seed:", seed)
@@ -69,7 +69,7 @@ func TestTree(t *testing.T) {
 		points := randomPoints(10000)
 
 		fmt.Printf("Inserting %d points\n", len(points))
-		err := insertPoints(points, tree, store)
+		err := insertPoints(points, tree)
 		if err != nil {
 			t.Fatalf("Error inserting point: %v", err)
 		}
@@ -92,7 +92,7 @@ func TestTree(t *testing.T) {
 				resetPointDistanceCalls()
 
 				startTime := time.Now()
-				coverTreeResults, err := tree.FindNearest(&query, store, maxResults, maxDistance)
+				coverTreeResults, err := tree.FindNearest(&query, maxResults, maxDistance)
 				finishTime := time.Now()
 
 				if err != nil {
@@ -211,13 +211,13 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 	return results, linearSearchDistanceCalls
 }
 
-func insertPoints(points []Point, tree *Tree, store Store) error {
+func insertPoints(points []Point, tree *Tree) error {
 	resetPointDistanceCalls()
 
 	startTime := time.Now()
 
 	for i := range points {
-		_, err := tree.Insert(&points[i], store)
+		_, err := tree.Insert(&points[i])
 		if err != nil {
 			return err
 		}

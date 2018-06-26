@@ -8,9 +8,16 @@ type Tree struct {
 	root         Item
 	rootLevel    int
 	deepestLevel int
+	store        Store
 }
 
-func (t *Tree) FindNearest(query Item, store Store, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
+func NewTree(store Store) *Tree {
+	return &Tree{
+		store: store,
+	}
+}
+
+func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
 	cs := coverSetWithItem(t.root, query)
 
 	for level := t.rootLevel; level >= t.deepestLevel; level-- {
@@ -28,7 +35,7 @@ func (t *Tree) FindNearest(query Item, store Store, maxResults int, maxDistance 
 			distThreshold += maxDistance
 		}
 
-		cs, err = cs.child(query, distThreshold, level-1, store)
+		cs, err = cs.child(query, distThreshold, level-1, t.store)
 		if err != nil || len(cs) == 0 {
 			return
 		}
@@ -37,7 +44,7 @@ func (t *Tree) FindNearest(query Item, store Store, maxResults int, maxDistance 
 	return cs.closest(maxResults, maxDistance), nil
 }
 
-func (t *Tree) Insert(item Item, store Store) (inserted Item, err error) {
+func (t *Tree) Insert(item Item) (inserted Item, err error) {
 
 	// Tree is empty - add item as the new root at infinity
 	if t.root == nil {
@@ -55,7 +62,7 @@ func (t *Tree) Insert(item Item, store Store) (inserted Item, err error) {
 		t.deepestLevel = t.rootLevel
 	}
 
-	inserted, err = t.insert(item, cs, t.rootLevel, store)
+	inserted, err = t.insert(item, cs, t.rootLevel)
 
 	if err == nil && inserted == nil {
 
@@ -63,7 +70,7 @@ func (t *Tree) Insert(item Item, store Store) (inserted Item, err error) {
 		cs := coverSetWithItem(item, t.root)
 		newRootLevel := levelForDistance(cs[0].Distance)
 
-		inserted, err = t.insert(t.root, cs, newRootLevel, store)
+		inserted, err = t.insert(t.root, cs, newRootLevel)
 		if err == nil {
 			t.root = item
 			t.rootLevel = newRootLevel
@@ -73,10 +80,10 @@ func (t *Tree) Insert(item Item, store Store) (inserted Item, err error) {
 	return
 }
 
-func (t *Tree) insert(item Item, coverSet coverSet, level int, store Store) (inserted Item, err error) {
+func (t *Tree) insert(item Item, coverSet coverSet, level int) (inserted Item, err error) {
 	distThreshold := distanceForLevel(level)
 
-	childCoverSet, err := coverSet.child(item, distThreshold, level-1, store)
+	childCoverSet, err := coverSet.child(item, distThreshold, level-1, t.store)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +96,7 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int, store Store) (ins
 		}
 
 		// Look for a suitable parent amongst the children
-		inserted, err = t.insert(item, childCoverSet, level-1, store)
+		inserted, err = t.insert(item, childCoverSet, level-1)
 		if inserted != nil || err != nil {
 			return
 		}
@@ -97,7 +104,7 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int, store Store) (ins
 		// No parent was found among the children - look for a suitable parent at this level
 		for _, csItem := range coverSet {
 			if csItem.Distance <= distThreshold {
-				err := store.Save(item, csItem.Item, level-1)
+				err := t.store.Save(item, csItem.Item, level-1)
 				if err == nil && level-1 < t.deepestLevel {
 					t.deepestLevel = level - 1
 				}
