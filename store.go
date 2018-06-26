@@ -1,6 +1,6 @@
 package covertree
 
 type Store interface {
-	Load(parent Item, level int) (items []Item, err error)
-	Save(item, parent Item, level int) error
+	LoadChildren(parent Item, level int) (children []Item, err error)
+	SaveChild(child, parent Item, level int) error
 }

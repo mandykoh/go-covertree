@@ -276,7 +276,7 @@ func traverseNodes(item Item, level int, indentLevel int, store *InMemoryStore, 
 
 	for i := len(levels) - 1; i >= 0; i-- {
 		l := levels[i]
-		children, _ := store.Load(item, l)
+		children, _ := store.LoadChildren(item, l)
 		for _, c := range children {
 			nodeCount += traverseNodes(c, l, indentLevel+1, store, print)
 		}

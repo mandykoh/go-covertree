@@ -17,7 +17,7 @@ func (item *dummyItem) Distance(other Item) float64 {
 
 func TestInMemoryStore(t *testing.T) {
 
-	t.Run("Load()", func(t *testing.T) {
+	t.Run("LoadChildren()", func(t *testing.T) {
 		parent := &dummyItem{"parent", 456.0}
 		item1 := &dummyItem{"thing1", 123.0}
 		item2 := &dummyItem{"thing2", 234.0}
@@ -30,8 +30,8 @@ func TestInMemoryStore(t *testing.T) {
 			},
 		}
 
-		t.Run("retrieves existing items", func(t *testing.T) {
-			items, _ := s.Load(parent, 7)
+		t.Run("retrieves existing child items", func(t *testing.T) {
+			items, _ := s.LoadChildren(parent, 7)
 
 			if actual, expected := len(items), 2; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)
@@ -48,7 +48,7 @@ func TestInMemoryStore(t *testing.T) {
 		t.Run("returns empty results for non-existent parent", func(t *testing.T) {
 			badParent := &dummyItem{"bad parent", 456.0}
 
-			items, _ := s.Load(badParent, 7)
+			items, _ := s.LoadChildren(badParent, 7)
 
 			if actual, expected := len(items), 0; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)
@@ -58,7 +58,7 @@ func TestInMemoryStore(t *testing.T) {
 		t.Run("returns empty results for non-existent children", func(t *testing.T) {
 			parent := &dummyItem{"parent", 456.0}
 
-			items, _ := s.Load(parent, 5)
+			items, _ := s.LoadChildren(parent, 5)
 
 			if actual, expected := len(items), 0; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)
@@ -66,14 +66,14 @@ func TestInMemoryStore(t *testing.T) {
 		})
 	})
 
-	t.Run("Save()", func(t *testing.T) {
+	t.Run("SaveChild()", func(t *testing.T) {
 
-		t.Run("adds an entry for a new item", func(t *testing.T) {
+		t.Run("adds an entry for a new child item", func(t *testing.T) {
 			item := &dummyItem{"child", 123.0}
 			parent := &dummyItem{"parent", 456.0}
 
 			s := NewInMemoryStore()
-			s.Save(item, parent, 5)
+			s.SaveChild(item, parent, 5)
 
 			levels, ok := s.items[item]
 			if !ok {
@@ -97,10 +97,10 @@ func TestInMemoryStore(t *testing.T) {
 			parent := &dummyItem{"parent", 456.0}
 
 			s := NewInMemoryStore()
-			s.Save(item1, parent, 5)
+			s.SaveChild(item1, parent, 5)
 
 			item1.value = 234.0
-			s.Save(item1, parent, 5)
+			s.SaveChild(item1, parent, 5)
 
 			levels, ok := s.items[parent]
 			if !ok {

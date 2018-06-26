@@ -10,22 +10,22 @@ func NewInMemoryStore() *InMemoryStore {
 	}
 }
 
-func (s *InMemoryStore) Load(parent Item, level int) (items []Item, err error) {
+func (s *InMemoryStore) LoadChildren(parent Item, level int) (children []Item, err error) {
 	return s.items[parent][level], nil
 }
 
-func (s *InMemoryStore) Save(item, parent Item, level int) error {
-	s.levelsFor(item)
+func (s *InMemoryStore) SaveChild(child, parent Item, level int) error {
+	s.levelsFor(child)
 
 	levels := s.levelsFor(parent)
 	for i, levelItem := range levels[level] {
-		if levelItem == item {
-			levels[level][i] = item
+		if levelItem == child {
+			levels[level][i] = child
 			return nil
 		}
 	}
 
-	levels[level] = append(levels[level], item)
+	levels[level] = append(levels[level], child)
 	return nil
 }
 

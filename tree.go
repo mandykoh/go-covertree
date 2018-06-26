@@ -104,7 +104,7 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int) (inserted Item, e
 		// No parent was found among the children - look for a suitable parent at this level
 		for _, csItem := range coverSet {
 			if csItem.Distance <= distThreshold {
-				err := t.store.Save(item, csItem.Item, level-1)
+				err := t.store.SaveChild(item, csItem.Item, level-1)
 				if err == nil && level-1 < t.deepestLevel {
 					t.deepestLevel = level - 1
 				}

@@ -13,7 +13,7 @@ func (cs coverSet) child(item Item, distThreshold float64, childLevel int, store
 			child = append(child, csItem)
 		}
 
-		children, err := store.Load(csItem.Item, childLevel)
+		children, err := store.LoadChildren(csItem.Item, childLevel)
 		if err != nil {
 			return nil, err
 		}
