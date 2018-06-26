@@ -32,8 +32,8 @@ func TestTree(t *testing.T) {
 	t.Run("Insert()", func(t *testing.T) {
 
 		t.Run("returns the original item when inserting a duplicate", func(t *testing.T) {
-			store := NewInMemoryStore()
-			tree := NewTree(store)
+			tree := NewInMemoryTree()
+			store := tree.store.(*InMemoryStore)
 
 			p1 := randomPoint()
 			inserted, err := tree.Insert(&p1)
@@ -59,8 +59,8 @@ func TestTree(t *testing.T) {
 	})
 
 	t.Run("with randomly populated tree", func(t *testing.T) {
-		store := NewInMemoryStore()
-		tree := NewTree(store)
+		tree := NewInMemoryTree()
+		store := tree.store.(*InMemoryStore)
 
 		seed := time.Now().UnixNano()
 		fmt.Println("Seed:", seed)

@@ -11,10 +11,8 @@ type Tree struct {
 	store        Store
 }
 
-func NewTree(store Store) *Tree {
-	return &Tree{
-		store: store,
-	}
+func NewTreeWithStore(store Store) *Tree {
+	return &Tree{store: store}
 }
 
 func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {

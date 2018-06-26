@@ -4,7 +4,7 @@ type InMemoryStore struct {
 	items map[Item]map[int][]Item
 }
 
-func NewInMemoryStore() *InMemoryStore {
+func newInMemoryStore() *InMemoryStore {
 	return &InMemoryStore{
 		items: make(map[Item]map[int][]Item),
 	}
@@ -37,4 +37,8 @@ func (s *InMemoryStore) levelsFor(item Item) map[int][]Item {
 	}
 
 	return levels
+}
+
+func NewInMemoryTree() *Tree {
+	return NewTreeWithStore(newInMemoryStore())
 }

@@ -72,7 +72,7 @@ func TestInMemoryStore(t *testing.T) {
 			item := &dummyItem{"child", 123.0}
 			parent := &dummyItem{"parent", 456.0}
 
-			s := NewInMemoryStore()
+			s := newInMemoryStore()
 			s.SaveChild(item, parent, 5)
 
 			levels, ok := s.items[item]
@@ -96,7 +96,7 @@ func TestInMemoryStore(t *testing.T) {
 			item1 := &dummyItem{"child", 123.0}
 			parent := &dummyItem{"parent", 456.0}
 
-			s := NewInMemoryStore()
+			s := newInMemoryStore()
 			s.SaveChild(item1, parent, 5)
 
 			item1.value = 234.0
