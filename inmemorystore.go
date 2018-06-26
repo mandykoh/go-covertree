@@ -29,6 +29,10 @@ func (s *InMemoryStore) SaveChild(child, parent Item, level int) error {
 	return nil
 }
 
+func (s *InMemoryStore) SaveTree(root Item, rootLevel, deepestLevel int) error {
+	return nil
+}
+
 func (s *InMemoryStore) levelsFor(item Item) map[int][]Item {
 	levels, ok := s.items[item]
 	if !ok {

@@ -56,6 +56,56 @@ func TestTree(t *testing.T) {
 				t.Errorf("Expected duplicate insertion to return original point but got a different point instead")
 			}
 		})
+
+		t.Run("saves the tree meta state when it changes", func(t *testing.T) {
+			store := newTestStore()
+			tree := NewTreeWithStore(store)
+
+			// First point should become the initial root at infinity
+			p1 := &Point{1.0, 0.0, 0.0}
+			_, err := tree.Insert(p1)
+
+			if err != nil {
+				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 1, p1, math.MaxInt32, math.MaxInt32)
+
+			// Second point should be inserted as a child, establishing the initial levels
+			p2 := &Point{2.0, 0.0, 0.0}
+			_, err = tree.Insert(p2)
+
+			if err != nil {
+				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 2, p1, 1, -1)
+
+			// Third point is very different and should cause re-parenting, but the tree depth should remain the same
+			p3 := &Point{100.0, 0.0, 0.0}
+			_, err = tree.Insert(p3)
+
+			if err != nil {
+				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 3, p3, 7, -1)
+
+			// Fourth point is a new child and should deepen the tree a little
+			p4 := &Point{1.1, 0.0, 0.0}
+			_, err = tree.Insert(p4)
+
+			if err != nil {
+				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 4, p3, 7, -4)
+
+			// Fifth point is another new child at the same depth and should not cause an update
+			p5 := &Point{2.1, 0.0, 0.0}
+			_, err = tree.Insert(p5)
+
+			if err != nil {
+				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 4, p3, 7, -4)
+		})
 	})
 
 	t.Run("with randomly populated tree", func(t *testing.T) {
@@ -287,4 +337,41 @@ func traverseNodes(item Item, level int, indentLevel int, store *InMemoryStore, 
 
 func traverseTree(tree *Tree, store *InMemoryStore, print bool) (nodeCount int) {
 	return traverseNodes(tree.root, tree.rootLevel, 0, store, print)
+}
+
+type testStore struct {
+	InMemoryStore
+	savedCount        int
+	savedRoot         Item
+	savedRootLevel    int
+	savedDeepestLevel int
+}
+
+func newTestStore() *testStore {
+	return &testStore{InMemoryStore: *newInMemoryStore()}
+}
+
+func (ts *testStore) SaveTree(root Item, rootLevel, deepestLevel int) error {
+	ts.savedCount++
+	ts.savedRoot = root
+	ts.savedRootLevel = rootLevel
+	ts.savedDeepestLevel = deepestLevel
+	return nil
+}
+
+func (ts *testStore) expectSavedTree(t *testing.T, saveCount int, root Item, rootLevel, deepestLevel int) {
+	t.Helper()
+
+	if expected, actual := saveCount, ts.savedCount; expected != actual {
+		t.Errorf("Expected tree to have been saved %d times but was saved %d times instead", expected, actual)
+	}
+	if expected, actual := root, ts.savedRoot; expected != actual {
+		t.Errorf("Expected tree root to be %v but was %v", expected, actual)
+	}
+	if expected, actual := rootLevel, ts.savedRootLevel; expected != actual {
+		t.Errorf("Expected tree root level to be at %d but was %d", expected, actual)
+	}
+	if expected, actual := deepestLevel, ts.savedDeepestLevel; expected != actual {
+		t.Errorf("Expected deepest level of tree to be at %d but was %d", expected, actual)
+	}
 }
