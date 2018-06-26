@@ -59,7 +59,7 @@ func TestTree(t *testing.T) {
 
 		t.Run("saves the tree meta state when it changes", func(t *testing.T) {
 			store := newTestStore()
-			tree := NewTreeWithStore(store)
+			tree, _ := NewTreeFromStore(store)
 
 			// First point should become the initial root at infinity
 			p1 := &Point{1.0, 0.0, 0.0}

@@ -14,6 +14,10 @@ func (s *InMemoryStore) LoadChildren(parent Item, level int) (children []Item, e
 	return s.items[parent][level], nil
 }
 
+func (s *InMemoryStore) LoadTree() (root Item, rootLevel, deepestLevel int, err error) {
+	return nil, 0, 0, nil
+}
+
 func (s *InMemoryStore) SaveChild(child, parent Item, level int) error {
 	s.levelsFor(child)
 
@@ -44,5 +48,6 @@ func (s *InMemoryStore) levelsFor(item Item) map[int][]Item {
 }
 
 func NewInMemoryTree() *Tree {
-	return NewTreeWithStore(newInMemoryStore())
+	tree, _ := NewTreeFromStore(newInMemoryStore())
+	return tree
 }
