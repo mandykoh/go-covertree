@@ -9,25 +9,6 @@ import (
 	"time"
 )
 
-var pointDistanceCalls = 0
-
-type Point [3]float64
-
-func distanceBetweenPoints(a, b Item) float64 {
-	pointDistanceCalls++
-
-	p1 := a.(*Point)
-	p2 := b.(*Point)
-
-	total := 0.0
-	for i := 0; i < len(p1); i++ {
-		diff := p2[i] - p1[i]
-		total += diff * diff
-	}
-
-	return math.Sqrt(total)
-}
-
 func TestTree(t *testing.T) {
 
 	t.Run("Insert()", func(t *testing.T) {
@@ -110,7 +91,8 @@ func TestTree(t *testing.T) {
 	})
 
 	t.Run("with randomly populated tree", func(t *testing.T) {
-		tree := NewInMemoryTree(distanceBetweenPoints)
+		distanceCalls := 0
+		tree := NewInMemoryTree(distanceBetweenPointsWithCounter(&distanceCalls))
 		store := tree.store.(*inMemoryStore)
 
 		seed := time.Now().UnixNano()
@@ -120,7 +102,7 @@ func TestTree(t *testing.T) {
 		points := randomPoints(10000)
 
 		fmt.Printf("Inserting %d points\n", len(points))
-		err := insertPoints(points, tree)
+		err := insertPoints(points, tree, &distanceCalls)
 		if err != nil {
 			t.Fatalf("Error inserting point: %v", err)
 		}
@@ -140,7 +122,7 @@ func TestTree(t *testing.T) {
 				query := randomPoint()
 				fmt.Printf("Query point %v (maxResults: %d, maxDistance: %g)\n", query, maxResults, maxDistance)
 
-				resetPointDistanceCalls()
+				distanceCalls = 0
 
 				startTime := time.Now()
 				coverTreeResults, err := tree.FindNearest(&query, maxResults, maxDistance)
@@ -150,7 +132,7 @@ func TestTree(t *testing.T) {
 					t.Fatalf("Error querying tree: %v", err)
 				}
 
-				coverTreeDistanceCalls := getPointDistanceCalls()
+				coverTreeDistanceCalls := distanceCalls
 
 				fmt.Printf("Cover Tree FindNearest took %d distance comparisons, %dms\n", coverTreeDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 				for _, r := range coverTreeResults {
@@ -214,19 +196,16 @@ func expectSameResults(t *testing.T, query Point, actualResults []ItemWithDistan
 	}
 }
 
-func getPointDistanceCalls() int {
-	return pointDistanceCalls
-}
-
 func linearSearch(query *Point, points []Point, maxResults int, maxDistance float64) (results []ItemWithDistance, distanceCallCount int) {
-	resetPointDistanceCalls()
+	distanceCalls := 0
+	distanceBetween := distanceBetweenPointsWithCounter(&distanceCalls)
 
 	startTime := time.Now()
 
 	results = make([]ItemWithDistance, maxResults, maxResults)
 
 	for i := range points {
-		dist := distanceBetweenPoints(query, &points[i])
+		dist := distanceBetween(query, &points[i])
 		if dist > maxDistance {
 			continue
 		}
@@ -251,7 +230,7 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 
 	finishTime := time.Now()
 
-	linearSearchDistanceCalls := getPointDistanceCalls()
+	linearSearchDistanceCalls := distanceCalls
 
 	fmt.Printf("Linear FindNearest took %d distance comparisons, %dms\n", linearSearchDistanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 
@@ -262,9 +241,7 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 	return results, linearSearchDistanceCalls
 }
 
-func insertPoints(points []Point, tree *Tree) error {
-	resetPointDistanceCalls()
-
+func insertPoints(points []Point, tree *Tree, distanceCalls *int) error {
 	startTime := time.Now()
 
 	for i := range points {
@@ -276,7 +253,7 @@ func insertPoints(points []Point, tree *Tree) error {
 
 	finishTime := time.Now()
 
-	fmt.Printf("Building tree took %d distance calls, %dms\n", getPointDistanceCalls(), finishTime.Sub(startTime)/time.Millisecond)
+	fmt.Printf("Building tree took %d distance calls, %dms\n", *distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
 	return nil
 }
 
@@ -298,10 +275,6 @@ func randomPoints(count int) (points []Point) {
 	}
 
 	return
-}
-
-func resetPointDistanceCalls() {
-	pointDistanceCalls = 0
 }
 
 func traverseNodes(item Item, level int, indentLevel int, store *inMemoryStore, print bool) (nodeCount int) {
@@ -374,5 +347,27 @@ func (ts *testStore) expectSavedTree(t *testing.T, saveCount int, root Item, roo
 	}
 	if expected, actual := deepestLevel, ts.savedDeepestLevel; expected != actual {
 		t.Errorf("Expected deepest level of tree to be at %d but was %d", expected, actual)
+	}
+}
+
+type Point [3]float64
+
+func distanceBetweenPoints(a, b Item) float64 {
+	p1 := a.(*Point)
+	p2 := b.(*Point)
+
+	total := 0.0
+	for i := 0; i < len(p1); i++ {
+		diff := p2[i] - p1[i]
+		total += diff * diff
+	}
+
+	return math.Sqrt(total)
+}
+
+func distanceBetweenPointsWithCounter(counter *int) DistanceFunc {
+	return func(a, b Item) float64 {
+		*counter++
+		return distanceBetweenPoints(a, b)
 	}
 }
