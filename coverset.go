@@ -2,11 +2,11 @@ package covertree
 
 type coverSet []ItemWithDistance
 
-func coverSetWithItem(item, query Item) coverSet {
-	return coverSet{itemWithDistanceForQuery(item, query)}
+func coverSetWithItem(item Item, distance float64) coverSet {
+	return coverSet{ItemWithDistance{item, distance}}
 }
 
-func (cs coverSet) child(item Item, distThreshold float64, childLevel int, store Store) (child coverSet, err error) {
+func (cs coverSet) child(item Item, distThreshold float64, childLevel int, distanceBetween DistanceFunc, store Store) (child coverSet, err error) {
 	for _, csItem := range cs {
 
 		if csItem.Distance <= distThreshold {
@@ -19,7 +19,7 @@ func (cs coverSet) child(item Item, distThreshold float64, childLevel int, store
 		}
 
 		for i := 0; i < len(children); i++ {
-			childItem := itemWithDistanceForQuery(children[i], item)
+			childItem := ItemWithDistance{children[i], distanceBetween(children[i], item)}
 			if childItem.Distance <= distThreshold {
 				child = append(child, childItem)
 			}

@@ -47,7 +47,7 @@ func (s *inMemoryStore) levelsFor(item Item) map[int][]Item {
 	return levels
 }
 
-func NewInMemoryTree() *Tree {
-	tree, _ := NewTreeFromStore(newInMemoryStore())
+func NewInMemoryTree(distanceFunc DistanceFunc) *Tree {
+	tree, _ := NewTreeFromStore(newInMemoryStore(), distanceFunc)
 	return tree
 }

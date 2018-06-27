@@ -1,18 +1,12 @@
 package covertree
 
 import (
-	"math"
 	"testing"
 )
 
 type dummyItem struct {
 	id    string
 	value float64
-}
-
-func (item *dummyItem) Distance(other Item) float64 {
-	otherItem := other.(*dummyItem)
-	return math.Abs(item.value - otherItem.value)
 }
 
 func TestInMemoryStore(t *testing.T) {

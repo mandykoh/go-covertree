@@ -13,14 +13,15 @@ var pointDistanceCalls = 0
 
 type Point [3]float64
 
-func (p Point) Distance(other Item) float64 {
+func distanceBetweenPoints(a, b Item) float64 {
 	pointDistanceCalls++
 
-	op := other.(*Point)
+	p1 := a.(*Point)
+	p2 := b.(*Point)
 
 	total := 0.0
-	for i := 0; i < len(op); i++ {
-		diff := op[i] - p[i]
+	for i := 0; i < len(p1); i++ {
+		diff := p2[i] - p1[i]
 		total += diff * diff
 	}
 
@@ -32,7 +33,7 @@ func TestTree(t *testing.T) {
 	t.Run("Insert()", func(t *testing.T) {
 
 		t.Run("returns the original item when inserting a duplicate", func(t *testing.T) {
-			tree := NewInMemoryTree()
+			tree := NewInMemoryTree(distanceBetweenPoints)
 			store := tree.store.(*inMemoryStore)
 
 			p1 := randomPoint()
@@ -59,7 +60,7 @@ func TestTree(t *testing.T) {
 
 		t.Run("saves the tree meta state when it changes", func(t *testing.T) {
 			store := newTestStore()
-			tree, _ := NewTreeFromStore(store)
+			tree, _ := NewTreeFromStore(store, distanceBetweenPoints)
 
 			// First point should become the initial root at infinity
 			p1 := &Point{1.0, 0.0, 0.0}
@@ -109,7 +110,7 @@ func TestTree(t *testing.T) {
 	})
 
 	t.Run("with randomly populated tree", func(t *testing.T) {
-		tree := NewInMemoryTree()
+		tree := NewInMemoryTree(distanceBetweenPoints)
 		store := tree.store.(*inMemoryStore)
 
 		seed := time.Now().UnixNano()
@@ -225,7 +226,7 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 	results = make([]ItemWithDistance, maxResults, maxResults)
 
 	for i := range points {
-		dist := query.Distance(&points[i])
+		dist := distanceBetweenPoints(query, &points[i])
 		if dist > maxDistance {
 			continue
 		}
