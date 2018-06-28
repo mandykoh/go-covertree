@@ -40,6 +40,67 @@ func TestTree(t *testing.T) {
 			}
 			expectSameResults(t, query, results, []ItemWithDistance{{&p, distanceBetweenPoints(&p, &query)}})
 		})
+
+		t.Run("returns available results when less than the maximum requested", func(t *testing.T) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+			p1 := Point{1.0, 0.0, 0.0}
+			tree.Insert(&p1)
+			p2 := Point{2.0, 0.0, 0.0}
+			tree.Insert(&p2)
+
+			query := Point{0.0, 0.0, 0.0}
+			results, err := tree.FindNearest(&query, 5, math.MaxFloat64)
+
+			if err != nil {
+				t.Fatalf("Expected search to succeed but got error: %v", err)
+			}
+			expectSameResults(t, query, results, []ItemWithDistance{
+				{&p1, distanceBetweenPoints(&p1, &query)},
+				{&p2, distanceBetweenPoints(&p2, &query)},
+			})
+		})
+
+		t.Run("returns up to the maximum requested results", func(t *testing.T) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+			p1 := Point{1.0, 0.0, 0.0}
+			tree.Insert(&p1)
+			p2 := Point{2.0, 0.0, 0.0}
+			tree.Insert(&p2)
+			p3 := Point{3.0, 0.0, 0.0}
+			tree.Insert(&p3)
+
+			query := Point{0.0, 0.0, 0.0}
+			results, err := tree.FindNearest(&query, 2, math.MaxFloat64)
+
+			if err != nil {
+				t.Fatalf("Expected search to succeed but got error: %v", err)
+			}
+			expectSameResults(t, query, results, []ItemWithDistance{
+				{&p1, distanceBetweenPoints(&p1, &query)},
+				{&p2, distanceBetweenPoints(&p2, &query)},
+			})
+		})
+
+		t.Run("returns results up to the maximum requested distance", func(t *testing.T) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+			p1 := Point{1.0, 0.0, 0.0}
+			tree.Insert(&p1)
+			p2 := Point{2.0, 0.0, 0.0}
+			tree.Insert(&p2)
+			p3 := Point{3.0, 0.0, 0.0}
+			tree.Insert(&p3)
+
+			query := Point{0.0, 0.0, 0.0}
+			results, err := tree.FindNearest(&query, 3, 2.0)
+
+			if err != nil {
+				t.Fatalf("Expected search to succeed but got error: %v", err)
+			}
+			expectSameResults(t, query, results, []ItemWithDistance{
+				{&p1, distanceBetweenPoints(&p1, &query)},
+				{&p2, distanceBetweenPoints(&p2, &query)},
+			})
+		})
 	})
 
 	t.Run("Insert()", func(t *testing.T) {
