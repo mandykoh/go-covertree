@@ -11,6 +11,37 @@ import (
 
 func TestTree(t *testing.T) {
 
+	t.Run("FindNearest()", func(t *testing.T) {
+
+		t.Run("returns no results for empty tree", func(t *testing.T) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+
+			query := randomPoint()
+			results, err := tree.FindNearest(&query, math.MaxInt32, math.MaxFloat64)
+
+			if err != nil {
+				t.Fatalf("Expected search to succeed but got error: %v", err)
+			}
+			if expected, actual := 0, len(results); expected != actual {
+				t.Errorf("Expected no results but got %d", actual)
+			}
+		})
+
+		t.Run("returns the only result for tree with a single root node", func(t *testing.T) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+			p := randomPoint()
+			tree.Insert(&p)
+
+			query := randomPoint()
+			results, err := tree.FindNearest(&query, 2, math.MaxFloat64)
+
+			if err != nil {
+				t.Fatalf("Expected search to succeed but got error: %v", err)
+			}
+			expectSameResults(t, query, results, []ItemWithDistance{{&p, distanceBetweenPoints(&p, &query)}})
+		})
+	})
+
 	t.Run("Insert()", func(t *testing.T) {
 
 		t.Run("returns the original item when inserting a duplicate", func(t *testing.T) {

@@ -28,6 +28,10 @@ func NewTreeFromStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
 }
 
 func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
+	if t.root == nil {
+		return
+	}
+
 	cs := coverSetWithItem(t.root, t.distanceBetween(t.root, query))
 
 	for level := t.rootLevel; level >= t.deepestLevel; level-- {
