@@ -41,64 +41,54 @@ func TestTree(t *testing.T) {
 			expectSameResults(t, query, results, []ItemWithDistance{{&p, distanceBetweenPoints(&p, &query)}})
 		})
 
-		t.Run("returns available results when less than the maximum requested", func(t *testing.T) {
+		t.Run("with a populated tree", func(t *testing.T) {
 			tree := NewInMemoryTree(distanceBetweenPoints)
-			p1 := Point{1.0, 0.0, 0.0}
-			tree.Insert(&p1)
-			p2 := Point{2.0, 0.0, 0.0}
-			tree.Insert(&p2)
 
-			query := Point{0.0, 0.0, 0.0}
-			results, err := tree.FindNearest(&query, 5, math.MaxFloat64)
-
-			if err != nil {
-				t.Fatalf("Expected search to succeed but got error: %v", err)
+			points := []Point{
+				{1.0, 0.0, 0.0},
+				{2.0, 0.0, 0.0},
+				{3.0, 0.0, 0.0},
 			}
-			expectSameResults(t, query, results, []ItemWithDistance{
-				{&p1, distanceBetweenPoints(&p1, &query)},
-				{&p2, distanceBetweenPoints(&p2, &query)},
+			insertPoints(points, tree)
+
+			t.Run("returns available results when less than the maximum requested", func(t *testing.T) {
+				query := Point{0.0, 0.0, 0.0}
+				results, err := tree.FindNearest(&query, 5, math.MaxFloat64)
+
+				if err != nil {
+					t.Fatalf("Expected search to succeed but got error: %v", err)
+				}
+				expectSameResults(t, query, results, []ItemWithDistance{
+					{&points[0], distanceBetweenPoints(&points[0], &query)},
+					{&points[1], distanceBetweenPoints(&points[1], &query)},
+					{&points[2], distanceBetweenPoints(&points[2], &query)},
+				})
 			})
-		})
 
-		t.Run("returns up to the maximum requested results", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
-			p1 := Point{1.0, 0.0, 0.0}
-			tree.Insert(&p1)
-			p2 := Point{2.0, 0.0, 0.0}
-			tree.Insert(&p2)
-			p3 := Point{3.0, 0.0, 0.0}
-			tree.Insert(&p3)
+			t.Run("returns up to the maximum requested results", func(t *testing.T) {
+				query := Point{0.0, 0.0, 0.0}
+				results, err := tree.FindNearest(&query, 2, math.MaxFloat64)
 
-			query := Point{0.0, 0.0, 0.0}
-			results, err := tree.FindNearest(&query, 2, math.MaxFloat64)
-
-			if err != nil {
-				t.Fatalf("Expected search to succeed but got error: %v", err)
-			}
-			expectSameResults(t, query, results, []ItemWithDistance{
-				{&p1, distanceBetweenPoints(&p1, &query)},
-				{&p2, distanceBetweenPoints(&p2, &query)},
+				if err != nil {
+					t.Fatalf("Expected search to succeed but got error: %v", err)
+				}
+				expectSameResults(t, query, results, []ItemWithDistance{
+					{&points[0], distanceBetweenPoints(&points[0], &query)},
+					{&points[1], distanceBetweenPoints(&points[1], &query)},
+				})
 			})
-		})
 
-		t.Run("returns results up to the maximum requested distance", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
-			p1 := Point{1.0, 0.0, 0.0}
-			tree.Insert(&p1)
-			p2 := Point{2.0, 0.0, 0.0}
-			tree.Insert(&p2)
-			p3 := Point{3.0, 0.0, 0.0}
-			tree.Insert(&p3)
+			t.Run("returns results up to the maximum requested distance", func(t *testing.T) {
+				query := Point{0.0, 0.0, 0.0}
+				results, err := tree.FindNearest(&query, 3, 2.0)
 
-			query := Point{0.0, 0.0, 0.0}
-			results, err := tree.FindNearest(&query, 3, 2.0)
-
-			if err != nil {
-				t.Fatalf("Expected search to succeed but got error: %v", err)
-			}
-			expectSameResults(t, query, results, []ItemWithDistance{
-				{&p1, distanceBetweenPoints(&p1, &query)},
-				{&p2, distanceBetweenPoints(&p2, &query)},
+				if err != nil {
+					t.Fatalf("Expected search to succeed but got error: %v", err)
+				}
+				expectSameResults(t, query, results, []ItemWithDistance{
+					{&points[0], distanceBetweenPoints(&points[0], &query)},
+					{&points[1], distanceBetweenPoints(&points[1], &query)},
+				})
 			})
 		})
 	})
@@ -194,10 +184,11 @@ func TestTree(t *testing.T) {
 		points := randomPoints(10000)
 
 		fmt.Printf("Inserting %d points\n", len(points))
-		err := insertPoints(points, tree, &distanceCalls)
+		timeTaken, err := insertPoints(points, tree)
 		if err != nil {
 			t.Fatalf("Error inserting point: %v", err)
 		}
+		fmt.Printf("Building tree took %d distance calls, %dms\n", distanceCalls, timeTaken/time.Millisecond)
 
 		nodeCount := traverseTree(tree, store, false)
 		fmt.Printf("Found %d nodes in tree\n", nodeCount)
@@ -262,6 +253,26 @@ func TestTree(t *testing.T) {
 	})
 }
 
+func distanceBetweenPoints(a, b Item) float64 {
+	p1 := a.(*Point)
+	p2 := b.(*Point)
+
+	total := 0.0
+	for i := 0; i < len(p1); i++ {
+		diff := p2[i] - p1[i]
+		total += diff * diff
+	}
+
+	return math.Sqrt(total)
+}
+
+func distanceBetweenPointsWithCounter(counter *int) DistanceFunc {
+	return func(a, b Item) float64 {
+		*counter++
+		return distanceBetweenPoints(a, b)
+	}
+}
+
 func expectSameResults(t *testing.T, query Point, actualResults []ItemWithDistance, expectedResults []ItemWithDistance) {
 	t.Helper()
 
@@ -286,6 +297,21 @@ func expectSameResults(t *testing.T, query Point, actualResults []ItemWithDistan
 			t.Errorf("Expected distance of nearest point %d to %v to be %v but got %v", i, query, expected, actual)
 		}
 	}
+}
+
+func insertPoints(points []Point, tree *Tree) (timeTaken time.Duration, err error) {
+	startTime := time.Now()
+
+	for i := range points {
+		_, err := tree.Insert(&points[i])
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	finishTime := time.Now()
+
+	return finishTime.Sub(startTime), nil
 }
 
 func linearSearch(query *Point, points []Point, maxResults int, maxDistance float64) (results []ItemWithDistance, distanceCallCount int) {
@@ -331,22 +357,6 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 	}
 
 	return results, linearSearchDistanceCalls
-}
-
-func insertPoints(points []Point, tree *Tree, distanceCalls *int) error {
-	startTime := time.Now()
-
-	for i := range points {
-		_, err := tree.Insert(&points[i])
-		if err != nil {
-			return err
-		}
-	}
-
-	finishTime := time.Now()
-
-	fmt.Printf("Building tree took %d distance calls, %dms\n", *distanceCalls, finishTime.Sub(startTime)/time.Millisecond)
-	return nil
 }
 
 func randomPoint() (point Point) {
@@ -443,23 +453,3 @@ func (ts *testStore) expectSavedTree(t *testing.T, saveCount int, root Item, roo
 }
 
 type Point [3]float64
-
-func distanceBetweenPoints(a, b Item) float64 {
-	p1 := a.(*Point)
-	p2 := b.(*Point)
-
-	total := 0.0
-	for i := 0; i < len(p1); i++ {
-		diff := p2[i] - p1[i]
-		total += diff * diff
-	}
-
-	return math.Sqrt(total)
-}
-
-func distanceBetweenPointsWithCounter(counter *int) DistanceFunc {
-	return func(a, b Item) float64 {
-		*counter++
-		return distanceBetweenPoints(a, b)
-	}
-}
