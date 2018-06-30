@@ -6,4 +6,6 @@
 
 `go-covertree` is a [cover tree](http://hunch.net/~jl/projects/cover_tree/icml_final/final-icml.pdf) implementation in Go for nearest-neighbour search and clustering. It uses an extensible backing store interface (suitable to adapting to key-value stores, RDBMSes, etc) to support very large data sets.
 
+See the [API documentation](https://godoc.org/github.com/mandykoh/go-covertree) for more details.
+
 This software is made available under an [MIT license](LICENSE).
