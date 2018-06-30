@@ -4,6 +4,10 @@ import (
 	"math"
 )
 
+// Tree represents a single cover tree.
+//
+// Trees should generally not be created except via NewTreeFromStore, and then
+// only by a Store.
 type Tree struct {
 	root            Item
 	rootLevel       int
@@ -12,6 +16,13 @@ type Tree struct {
 	store           Store
 }
 
+// NewTreeFromStore creates and initialises a Tree from the specified store by
+// calling the store’s LoadTree method. Depending on the store, this may result
+// in a new empty tree being created, or a previously populated tree being
+// returned.
+//
+// distanceFunc is the function used by the tree to determine the distance
+// between two items.
 func NewTreeFromStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
 	root, rootLevel, deepestLevel, err := store.LoadTree()
 	if err != nil {
