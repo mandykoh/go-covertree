@@ -41,6 +41,9 @@ func NewTreeFromStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
 // FindNearest returns the nearest items in the tree to the specified query
 // item, up to the specified maximum number of results and maximum distance.
 //
+// Results are returned with their distances from the query Item, in order from
+// closest to furthest.
+//
 // If no items are found matching the given criteria, an empty result set is
 // returned.
 func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
