@@ -38,6 +38,11 @@ func NewTreeFromStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
 	}, nil
 }
 
+// FindNearest returns the nearest items in the tree to the specified query
+// item, up to the specified maximum number of results and maximum distance.
+//
+// If no items are found matching the given criteria, an empty result set is
+// returned.
 func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
 	if t.root == nil {
 		return
@@ -69,6 +74,12 @@ func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (res
 	return cs.closest(maxResults, maxDistance), nil
 }
 
+// Insert attempts to insert the specified item into the tree.
+//
+// Two items are defined as being the same if their distance is exactly zero.
+// If an item already exists in the tree which is the same as the item being
+// inserted, the item in the tree is returned. Otherwise, the newly inserted
+// item is returned instead.
 func (t *Tree) Insert(item Item) (inserted Item, err error) {
 
 	// Tree is empty - add item as the new root at infinity
