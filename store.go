@@ -12,9 +12,18 @@ package covertree
 // being stored in the tree.
 type Store interface {
 
+	// DeleteChild removes an item from the store as a child of the specified
+	// parent item, at the given level. If no such item exists, this operation
+	// should have no effect.
+	//
+	// Implementations are free to completely delete the item itself, but should
+	// bear in mind that any children of the item should continue to exist and
+	// will be re-parented to other items.
+	DeleteChild(item, parent Item, level int) error
+
 	// LoadChildren returns the explicit child items of the specified parent
 	// item along with their levels.
-	LoadChildren(parent Item) (ItemsWithLevels, error)
+	LoadChildren(parent Item) (LevelsWithItems, error)
 
 	// LoadTree is called by NewTreeFromStore to retrieve the metadata for the
 	// Tree instance being managed by the Store.

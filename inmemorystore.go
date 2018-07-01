@@ -10,7 +10,19 @@ func newInMemoryStore() *inMemoryStore {
 	}
 }
 
-func (s *inMemoryStore) LoadChildren(parent Item) (result ItemsWithLevels, err error) {
+func (s *inMemoryStore) DeleteChild(item, parent Item, level int) error {
+	levels := s.items[parent]
+	for i, levelItem := range levels[level] {
+		if levelItem == item {
+			levels[level] = append(levels[level][:i], levels[level][i+1:]...)
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func (s *inMemoryStore) LoadChildren(parent Item) (result LevelsWithItems, err error) {
 	for level, items := range s.items[parent] {
 		result.Set(level, items)
 	}

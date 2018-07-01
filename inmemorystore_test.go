@@ -11,6 +11,30 @@ type dummyItem struct {
 
 func TestInMemoryStore(t *testing.T) {
 
+	t.Run("DeleteChild()", func(t *testing.T) {
+		parent := &dummyItem{"parent", 456.0}
+		item1 := &dummyItem{"thing1", 123.0}
+		item2 := &dummyItem{"thing2", 234.0}
+
+		s := inMemoryStore{
+			items: map[Item]map[int][]Item{
+				parent: {
+					7: {item1, item2},
+				},
+			},
+		}
+
+		t.Run("removes an existing child", func(t *testing.T) {
+			s.DeleteChild(item2, parent, 7)
+
+			items := s.levelsFor(parent)[7]
+
+			if expected, actual := 1, len(items); expected != actual {
+				t.Errorf("Expected one child item after deletion but got %d", actual)
+			}
+		})
+	})
+
 	t.Run("LoadChildren()", func(t *testing.T) {
 		parent := &dummyItem{"parent", 456.0}
 		item1 := &dummyItem{"thing1", 123.0}
@@ -26,7 +50,7 @@ func TestInMemoryStore(t *testing.T) {
 
 		t.Run("retrieves existing child items", func(t *testing.T) {
 			allChildren, _ := s.LoadChildren(parent)
-			items := allChildren.itemsForLevel(7)
+			items := allChildren.itemsAt(7)
 
 			if actual, expected := len(items), 2; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)
@@ -54,7 +78,7 @@ func TestInMemoryStore(t *testing.T) {
 			parent := &dummyItem{"parent", 456.0}
 
 			allChildren, _ := s.LoadChildren(parent)
-			items := allChildren.itemsForLevel(5)
+			items := allChildren.itemsAt(5)
 
 			if actual, expected := len(items), 0; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)

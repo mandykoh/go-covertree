@@ -11,6 +11,10 @@ import (
 
 func TestTree(t *testing.T) {
 
+	seed := time.Now().UnixNano()
+	fmt.Println("Seed:", seed)
+	rand.Seed(seed)
+
 	t.Run("FindNearest()", func(t *testing.T) {
 
 		t.Run("returns no results for empty tree", func(t *testing.T) {
@@ -141,16 +145,16 @@ func TestTree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 2, p1, 1)
+			store.expectSavedTree(t, 2, p1, 0)
 
-			// Third point is very different and should cause re-parenting, but the tree depth should remain the same
+			// Third point is very different and should cause the root to be promoted
 			p3 := &Point{100.0, 0.0, 0.0}
 			_, err = tree.Insert(p3)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 3, p3, 7)
+			store.expectSavedTree(t, 3, p1, 8)
 
 			// Fourth point is a new child and should deepen the tree a little without affecting metadata
 			p4 := &Point{1.1, 0.0, 0.0}
@@ -159,7 +163,7 @@ func TestTree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 3, p3, 7)
+			store.expectSavedTree(t, 3, p1, 8)
 
 			// Fifth point is another new child at the same depth and also should not cause an update
 			p5 := &Point{2.1, 0.0, 0.0}
@@ -168,7 +172,206 @@ func TestTree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 3, p3, 7)
+			store.expectSavedTree(t, 3, p1, 8)
+		})
+	})
+
+	t.Run("Remove()", func(t *testing.T) {
+
+		t.Run("removes item from the tree while preserving its children", func(t *testing.T) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+
+			points := []Point{
+				{1.0, 0.0, 0.0},
+				{1.1, 0.0, 0.0},
+				{1.11, 0.0, 0.0},
+				{1.111, 0.0, 0.0},
+			}
+			insertPoints(points, tree)
+
+			tree.Remove(&points[2])
+
+			nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
+			if expected, actual := len(points)-1, nodeCount; expected != actual {
+				t.Errorf("Expected %d nodes remaining after removal but found %d", expected, actual)
+			}
+
+			// Removed node should no longer be findable
+			results, _ := tree.FindNearest(&points[2], 1, 0)
+			expectSameResults(t, points[2], results, nil)
+
+			// Orphaned child node should have been re-parented and still be findable
+			results, _ = tree.FindNearest(&points[3], 1, 0)
+			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
+
+			tree.Remove(&points[1])
+
+			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
+			if expected, actual := len(points)-2, nodeCount; expected != actual {
+				t.Errorf("Expected %d nodes remaining after removal but found %d", expected, actual)
+			}
+
+			// Removed node should no longer be findable
+			results, _ = tree.FindNearest(&points[1], 1, 0)
+			expectSameResults(t, points[1], results, nil)
+
+			// Orphaned child node should have been re-parented and still be findable
+			results, _ = tree.FindNearest(&points[3], 1, 0)
+			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
+
+			tree.Remove(&points[0])
+
+			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
+			if expected, actual := len(points)-3, nodeCount; expected != actual {
+				t.Errorf("Expected %d nodes remaining after removal but found %d", expected, actual)
+			}
+
+			// Removed node should no longer be findable
+			results, _ = tree.FindNearest(&points[0], 1, 0)
+			expectSameResults(t, points[0], results, nil)
+
+			// Orphaned child node should have been re-parented and still be findable
+			results, _ = tree.FindNearest(&points[3], 1, 0)
+			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
+
+			tree.Remove(&points[3])
+
+			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
+			if expected, actual := len(points)-4, nodeCount; expected != actual {
+				t.Errorf("Expected %d nodes remaining after removal but found %d", expected, actual)
+			}
+
+			// Removed node should no longer be findable (tree is now empty)
+			results, _ = tree.FindNearest(&points[3], 1, 0)
+			expectSameResults(t, points[3], results, nil)
+		})
+
+		t.Run("correctly re-parents orphans that are no longer covered by the root", func(t *testing.T) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+
+			points := []Point{
+				{0.0, 0.0, 0.0},
+				{16.0, 0.0, 0.0},
+				{15.0, 0.0, 6.0},
+			}
+			insertPoints(points, tree)
+
+			if expected, actual := &points[0], tree.root; expected != actual {
+				t.Errorf("Expected root node to be %v before removal but was %v", expected, actual)
+			}
+			if expected, actual := 4, tree.rootLevel; expected != actual {
+				t.Errorf("Expected root to be at level %d but was %d", expected, actual)
+			}
+
+			tree.Remove(&points[1])
+
+			nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
+			if expected, actual := len(points)-1, nodeCount; expected != actual {
+				t.Fatalf("Expected %d nodes remaining after removal but found %d", expected, actual)
+			}
+
+			if expected, actual := &points[0], tree.root; expected != actual {
+				t.Errorf("Expected root node to be %v after removal but was %v", expected, actual)
+			}
+			if expected, actual := 6, tree.rootLevel; expected != actual {
+				t.Errorf("Expected root to have been promoted to level %d but was %d", expected, actual)
+			}
+
+			// Removed node should no longer be findable
+			results, _ := tree.FindNearest(&points[1], 1, 0)
+			expectSameResults(t, points[1], results, nil)
+
+			// Remaining nodes should still be findable
+			results, _ = tree.FindNearest(&points[0], 1, 0)
+			expectSameResults(t, points[0], results, []ItemWithDistance{{&points[0], 0}})
+			results, _ = tree.FindNearest(&points[2], 1, 0)
+			expectSameResults(t, points[2], results, []ItemWithDistance{{&points[2], 0}})
+		})
+
+		t.Run("saves the tree metadata when it changes", func(t *testing.T) {
+			store := newTestStore()
+			tree, _ := NewTreeFromStore(store, distanceBetweenPoints)
+
+			points := []Point{
+				{0.0, 0.0, 0.0},
+				{16.0, 0.0, 0.0},
+				{15.0, 0.0, 6.0},
+				{1.0, 0.0, 0.0},
+			}
+			insertPoints(points, tree)
+
+			store.savedCount = 0
+			store.expectSavedTree(t, 0, &points[0], 4)
+
+			// Removing parent node should cause its uncovered child to bubble up and the root to be promoted
+			err := tree.Remove(&points[1])
+			if err != nil {
+				t.Fatalf("Expected removal to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 1, &points[0], 6)
+
+			// Removing leaf node should not affect metadata
+			err = tree.Remove(&points[3])
+			if err != nil {
+				t.Fatalf("Expected removal to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 1, &points[0], 6)
+
+			// Removing root node should cause child to become the root
+			err = tree.Remove(&points[0])
+			if err != nil {
+				t.Fatalf("Expected removal to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 2, &points[2], 6)
+
+			// Removing final root node should return tree to empty state
+			err = tree.Remove(&points[2])
+			if err != nil {
+				t.Fatalf("Expected removal to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 3, nil, 6)
+
+			// Re-inserting a node should make it the new root
+			_, err = tree.Insert(&points[1])
+			if err != nil {
+				t.Fatalf("Expected insertion to succeed but got error: %v", err)
+			}
+			store.expectSavedTree(t, 4, &points[1], math.MaxInt32)
+		})
+
+		t.Run("allows all remaining nodes to be findable after removal", func(t *testing.T) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+
+			points := randomPoints(100)
+			insertPoints(points, tree)
+
+			var pointsToRemove []Item
+			for i := range points {
+				pointsToRemove = append(pointsToRemove, &points[i])
+			}
+			rand.Shuffle(len(pointsToRemove), func(i, j int) {
+				pointsToRemove[i], pointsToRemove[j] = pointsToRemove[j], pointsToRemove[i]
+			})
+
+			for i, p := range pointsToRemove {
+				//fmt.Printf("Removing (%d) %v\n", i, p)
+				tree.Remove(p)
+
+				nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
+				if expected, actual := len(points)-i-1, nodeCount; expected != actual {
+					t.Fatalf("Expected %d nodes remaining after %d removals but found %d", expected, i+1, actual)
+				}
+
+				// Removed node should no longer be findable
+				results, _ := tree.FindNearest(p, 1, 0)
+				expectSameResults(t, *p.(*Point), results, nil)
+
+				// All other nodes should still be findable
+				for j := i + 1; j < len(pointsToRemove); j++ {
+					results, _ = tree.FindNearest(pointsToRemove[j], 1, 0)
+					expectSameResults(t, *pointsToRemove[j].(*Point), results, []ItemWithDistance{{pointsToRemove[j], 0}})
+				}
+			}
 		})
 	})
 
@@ -177,11 +380,7 @@ func TestTree(t *testing.T) {
 		tree := NewInMemoryTree(distanceBetweenPointsWithCounter(&distanceCalls))
 		store := tree.store.(*inMemoryStore)
 
-		seed := time.Now().UnixNano()
-		fmt.Println("Seed:", seed)
-		rand.Seed(seed)
-
-		points := randomPoints(10000)
+		points := randomPoints(1000)
 
 		fmt.Printf("Inserting %d points\n", len(points))
 		timeTaken, err := insertPoints(points, tree)
@@ -234,6 +433,14 @@ func TestTree(t *testing.T) {
 		}
 
 		t.Run("FindNearest()", func(t *testing.T) {
+
+			t.Run("can find all nodes individually", func(t *testing.T) {
+				for i := range points {
+					results, _ := tree.FindNearest(&points[i], 1, 0)
+					expectSameResults(t, points[i], results, []ItemWithDistance{{&points[i], 0}})
+				}
+			})
+
 			t.Run("returns correct results for nearest neighbour query", func(t *testing.T) {
 				compareWithLinearSearch(10, 1, math.MaxFloat64)
 			})
@@ -277,7 +484,7 @@ func expectSameResults(t *testing.T, query Point, actualResults []ItemWithDistan
 	t.Helper()
 
 	if expected, actual := len(expectedResults), len(actualResults); expected != actual {
-		t.Errorf("Expected %d results but got %d instead", expected, actual)
+		t.Fatalf("Expected %d results for %v but got %d instead", expected, query, actual)
 
 	}
 
@@ -379,7 +586,7 @@ func randomPoints(count int) (points []Point) {
 	return
 }
 
-func traverseNodes(item Item, level int, indentLevel int, store *inMemoryStore, print bool) (nodeCount int) {
+func traverseNodes(item, parent Item, level int, indentLevel int, store *inMemoryStore, print bool) (nodeCount int) {
 	if print {
 		fmt.Printf("%4d: ", level)
 		for i := 0; i < indentLevel; i++ {
@@ -389,7 +596,13 @@ func traverseNodes(item Item, level int, indentLevel int, store *inMemoryStore, 
 			fmt.Print(" ")
 		}
 
-		fmt.Println(item)
+		fmt.Printf("%v", item)
+
+		if parent != nil {
+			fmt.Printf(" (%g)", distanceBetweenPoints(item, parent))
+		}
+
+		fmt.Println()
 	}
 
 	nodeCount = 1
@@ -403,8 +616,8 @@ func traverseNodes(item Item, level int, indentLevel int, store *inMemoryStore, 
 	for i := len(levels) - 1; i >= 0; i-- {
 		l := levels[i]
 		children, _ := store.LoadChildren(item)
-		for _, c := range children.itemsForLevel(l) {
-			nodeCount += traverseNodes(c, l, indentLevel+1, store, print)
+		for _, c := range children.itemsAt(l) {
+			nodeCount += traverseNodes(c, item, l, indentLevel+1, store, print)
 		}
 	}
 
@@ -412,7 +625,11 @@ func traverseNodes(item Item, level int, indentLevel int, store *inMemoryStore, 
 }
 
 func traverseTree(tree *Tree, store *inMemoryStore, print bool) (nodeCount int) {
-	return traverseNodes(tree.root, tree.rootLevel, 0, store, print)
+	if tree.root == nil {
+		return 0
+	}
+
+	return traverseNodes(tree.root, nil, tree.rootLevel, 0, store, print)
 }
 
 type testStore struct {
@@ -448,3 +665,7 @@ func (ts *testStore) expectSavedTree(t *testing.T, saveCount int, root Item, roo
 }
 
 type Point [3]float64
+
+func (p *Point) String() string {
+	return fmt.Sprintf("[%g %g %g]", p[0], p[1], p[2])
+}

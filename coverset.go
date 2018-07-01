@@ -3,12 +3,12 @@ package covertree
 type coverSet []itemWithChildren
 
 func coverSetWithItem(item Item, distance float64, store Store) (coverSet, error) {
-	children, err := store.LoadChildren(item)
+	iwc, err := itemWithChildrenFromStore(item, distance, store)
 	if err != nil {
 		return nil, err
 	}
 
-	return coverSet{{ItemWithDistance{item, distance}, children}}, nil
+	return coverSet{iwc}, nil
 }
 
 func (cs coverSet) atBottom() bool {
@@ -24,21 +24,18 @@ func (cs coverSet) child(query Item, distThreshold float64, childLevel int, dist
 	for _, csItem := range cs {
 		if csItem.parent.Distance <= distThreshold {
 			child = append(child, csItem)
+		}
 
-			for _, childItem := range csItem.children.itemsForLevel(childLevel) {
-				childItem := ItemWithDistance{childItem, distanceBetween(childItem, query)}
-				if childItem.Distance <= distThreshold {
-					childItemChildren, err := store.LoadChildren(childItem.Item)
-					if err != nil {
-						return nil, err
-					}
-
-					promotedChild := itemWithChildren{childItem, childItemChildren}
-					child = append(child, promotedChild)
+		for _, childItem := range csItem.removeChildrenAt(childLevel) {
+			childDist := distanceBetween(childItem, query)
+			if childDist <= distThreshold {
+				promotedChild, err := itemWithChildrenFromStore(childItem, childDist, store)
+				if err != nil {
+					return nil, err
 				}
-			}
 
-			csItem.children.deleteLevel(childLevel)
+				child = append(child, promotedChild)
+			}
 		}
 	}
 
@@ -48,12 +45,12 @@ func (cs coverSet) child(query Item, distThreshold float64, childLevel int, dist
 func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
 	mins := make([]ItemWithDistance, maxItems, maxItems)
 
-	for i := 0; i < len(cs); i++ {
+	for i := range cs {
 		if cs[i].parent.Distance > maxDist {
 			continue
 		}
 
-		for j := 0; j < len(mins); j++ {
+		for j := range mins {
 			if mins[j].Item == nil || cs[i].parent.Distance < mins[j].Distance {
 				for k := len(mins) - 1; k > j; k-- {
 					mins[k] = mins[k-1]

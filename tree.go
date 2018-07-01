@@ -81,7 +81,7 @@ func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (res
 		}
 
 		cs, err = cs.child(query, distThreshold, level-1, t.distanceBetween, t.store)
-		if err != nil || len(cs) == 0 {
+		if err != nil {
 			return
 		}
 	}
@@ -126,24 +126,110 @@ func (t *Tree) Insert(item Item) (inserted Item, err error) {
 	if err == nil {
 		if inserted == nil {
 
-			// No parent found - re-parent the tree with the new item
-			cs, err = coverSetWithItem(item, t.distanceBetween(item, t.root), t.store)
-			if err != nil {
-				return nil, err
-			}
-			newRootLevel := levelForDistance(cs[0].parent.Distance)
+			// No covering parent found - promote the current root to cover the
+			// new item and insert it as a child.
 
-			inserted, err = t.insert(t.root, cs, newRootLevel)
+			err = t.hoistRootForChild(item, math.MinInt32)
 			if err == nil {
-				err = t.store.SaveTree(item, newRootLevel)
-				if err == nil {
-					t.root = item
-					t.rootLevel = newRootLevel
-				}
+				err = t.store.SaveTree(t.root, t.rootLevel)
 			}
 		}
 	}
 
+	return
+}
+
+func (t *Tree) Remove(item Item) (err error) {
+	rootDist := t.distanceBetween(item, t.root)
+	cs, err := coverSetWithItem(t.root, rootDist, t.store)
+	if err != nil {
+		return err
+	}
+
+	if rootDist == 0 {
+		t.root = nil
+
+		for level, items := range cs[0].children.items {
+			for _, item := range items {
+				if t.root == nil {
+
+					// Promote one child to be the new root
+					t.root = item
+
+				} else {
+
+					// Add all remaining children as children of the new root
+					err = t.hoistRootForChild(item, level)
+					if err != nil {
+						return
+					}
+				}
+			}
+		}
+
+		err = t.store.SaveTree(t.root, t.rootLevel)
+
+	} else {
+		oldRootLevel := t.rootLevel
+
+		var orphans []Item
+		orphans, err = t.remove(item, cs, t.rootLevel)
+
+		for _, orphan := range orphans {
+			err = t.hoistRootForChild(orphan, math.MinInt32)
+			if err != nil {
+				return err
+			}
+		}
+
+		if t.rootLevel != oldRootLevel {
+			err = t.store.SaveTree(t.root, t.rootLevel)
+		}
+	}
+
+	return
+}
+
+func (t *Tree) adoptOrphans(orphans []Item, query Item, parents coverSet, distThreshold float64, childLevel int) ([]Item, error) {
+	remaining := 0
+
+nextOrphan:
+	for _, item := range orphans {
+		for _, parent := range parents {
+			if parent.parent.Item != query && t.distanceBetween(item, parent.parent.Item) <= distThreshold {
+
+				err := t.store.SaveChild(item, parent.parent.Item, childLevel)
+				if err != nil {
+					return nil, err
+				}
+
+				continue nextOrphan
+			}
+		}
+
+		orphans[remaining] = item
+		remaining++
+	}
+
+	return orphans[:remaining], nil
+}
+
+func (t *Tree) hoistRootForChild(child Item, minChildLevel int) (err error) {
+	dist := t.distanceBetween(t.root, child)
+	childLevel := levelForDistance(dist)
+	newRootLevel := t.rootLevel
+
+	if childLevel < minChildLevel {
+		childLevel = minChildLevel
+	}
+	if childLevel >= newRootLevel {
+		newRootLevel = childLevel + 1
+	}
+
+	err = t.store.SaveChild(child, t.root, childLevel)
+	if err == nil {
+		t.rootLevel = newRootLevel
+	}
 	return
 }
 
@@ -180,10 +266,53 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int) (inserted Item, e
 	return nil, nil
 }
 
+func (t *Tree) remove(item Item, coverSet coverSet, level int) (orphans []Item, err error) {
+	distThreshold := distanceForLevel(level)
+
+	childCoverSet, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
+
+	if err == nil && len(childCoverSet) > 0 {
+		found := false
+
+		for i := range childCoverSet {
+			if childCoverSet[i].parent.Distance == 0 {
+				found = true
+
+				for _, csItem := range coverSet {
+					err = t.store.DeleteChild(childCoverSet[i].parent.Item, csItem.parent.Item, level-1)
+					if err != nil {
+						return
+					}
+				}
+
+				for _, child := range childCoverSet[i].children.items {
+					orphans = append(orphans, child...)
+				}
+
+				// Try to get orphans adopted by one of the siblings of the deleted node
+				orphans, err = t.adoptOrphans(orphans, item, childCoverSet, distanceForLevel(level-2), level-2)
+
+				break
+			}
+		}
+
+		if !found {
+			orphans, err = t.remove(item, childCoverSet, level-1)
+		}
+
+		if err == nil {
+			// Try to get orphans adopted by nodes at this level
+			orphans, err = t.adoptOrphans(orphans, item, coverSet, distThreshold, level-1)
+		}
+	}
+
+	return
+}
+
 func distanceForLevel(level int) float64 {
 	return math.Pow(2, float64(level))
 }
 
 func levelForDistance(distance float64) int {
-	return int(math.Log2(distance) + 1)
+	return int(math.Ceil(math.Log2(distance)))
 }
