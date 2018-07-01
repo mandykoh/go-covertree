@@ -16,10 +16,22 @@ type Tree struct {
 	store           Store
 }
 
+// NewEmptyTreeWithStore creates an empty Tree using the specified store.
+//
+// distanceFunc is the function used by the tree to determine the distance
+// between two items.
+func NewEmptyTreeWithStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
+	return &Tree{
+		root:            nil,
+		rootLevel:       math.MaxInt32,
+		deepestLevel:    math.MaxInt32,
+		distanceBetween: distanceFunc,
+		store:           store,
+	}, nil
+}
+
 // NewTreeFromStore creates and initialises a Tree from the specified store by
-// calling the store’s LoadTree method. Depending on the store, this may result
-// in a new empty tree being created, or a previously populated tree being
-// returned.
+// calling the store’s LoadTree method.
 //
 // distanceFunc is the function used by the tree to determine the distance
 // between two items.

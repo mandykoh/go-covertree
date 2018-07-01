@@ -51,6 +51,6 @@ func (s *inMemoryStore) levelsFor(item Item) map[int][]Item {
 // store. The tree will use the specified function for determining the distance
 // between items.
 func NewInMemoryTree(distanceFunc DistanceFunc) *Tree {
-	tree, _ := NewTreeFromStore(newInMemoryStore(), distanceFunc)
+	tree, _ := NewEmptyTreeWithStore(newInMemoryStore(), distanceFunc)
 	return tree
 }
