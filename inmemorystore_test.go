@@ -25,7 +25,8 @@ func TestInMemoryStore(t *testing.T) {
 		}
 
 		t.Run("retrieves existing child items", func(t *testing.T) {
-			items, _ := s.LoadChildren(parent, 7)
+			allChildren, _ := s.LoadChildren(parent)
+			items := allChildren.itemsForLevel(7)
 
 			if actual, expected := len(items), 2; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)
@@ -42,9 +43,9 @@ func TestInMemoryStore(t *testing.T) {
 		t.Run("returns empty results for non-existent parent", func(t *testing.T) {
 			badParent := &dummyItem{"bad parent", 456.0}
 
-			items, _ := s.LoadChildren(badParent, 7)
+			allChildren, _ := s.LoadChildren(badParent)
 
-			if actual, expected := len(items), 0; actual != expected {
+			if actual, expected := len(allChildren.items), 0; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)
 			}
 		})
@@ -52,7 +53,8 @@ func TestInMemoryStore(t *testing.T) {
 		t.Run("returns empty results for non-existent children", func(t *testing.T) {
 			parent := &dummyItem{"parent", 456.0}
 
-			items, _ := s.LoadChildren(parent, 5)
+			allChildren, _ := s.LoadChildren(parent)
+			items := allChildren.itemsForLevel(5)
 
 			if actual, expected := len(items), 0; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)

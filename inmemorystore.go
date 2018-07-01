@@ -10,12 +10,16 @@ func newInMemoryStore() *inMemoryStore {
 	}
 }
 
-func (s *inMemoryStore) LoadChildren(parent Item, level int) (children []Item, err error) {
-	return s.items[parent][level], nil
+func (s *inMemoryStore) LoadChildren(parent Item) (result ItemsWithLevels, err error) {
+	for level, items := range s.items[parent] {
+		result.Set(level, items)
+	}
+
+	return
 }
 
-func (s *inMemoryStore) LoadTree() (root Item, rootLevel, deepestLevel int, err error) {
-	return nil, 0, 0, nil
+func (s *inMemoryStore) LoadTree() (root Item, rootLevel int, err error) {
+	return nil, 0, nil
 }
 
 func (s *inMemoryStore) SaveChild(child, parent Item, level int) error {
@@ -33,7 +37,7 @@ func (s *inMemoryStore) SaveChild(child, parent Item, level int) error {
 	return nil
 }
 
-func (s *inMemoryStore) SaveTree(root Item, rootLevel, deepestLevel int) error {
+func (s *inMemoryStore) SaveTree(root Item, rootLevel int) error {
 	return nil
 }
 
