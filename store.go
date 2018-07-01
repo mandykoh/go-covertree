@@ -12,9 +12,8 @@ package covertree
 // being stored in the tree.
 type Store interface {
 
-	// LoadChildren returns the child items of the specified parent item at a
-	// given level. Because of the nested property of cover trees, this should
-	// always include the parent itself.
+	// LoadChildren returns the explicit child items of the specified parent
+	// item at a given level.
 	LoadChildren(parent Item, level int) (children []Item, err error)
 
 	// LoadTree is called by NewTreeFromStore to retrieve the metadata for the
