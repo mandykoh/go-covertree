@@ -7,29 +7,29 @@ type LevelsWithItems struct {
 }
 
 // Add adds an Item to the specified level.
-func (iwl *LevelsWithItems) Add(level int, item Item) {
-	if iwl.items == nil {
-		iwl.items = make(map[int][]Item)
+func (lwi *LevelsWithItems) Add(level int, item Item) {
+	if lwi.items == nil {
+		lwi.items = make(map[int][]Item)
 	}
 
-	iwl.items[level] = append(iwl.items[level], item)
+	lwi.items[level] = append(lwi.items[level], item)
 }
 
 // Set specifies the Items for an entire level.
-func (iwl *LevelsWithItems) Set(level int, items []Item) {
-	if iwl.items == nil {
-		iwl.items = make(map[int][]Item)
+func (lwi *LevelsWithItems) Set(level int, items []Item) {
+	if lwi.items == nil {
+		lwi.items = make(map[int][]Item)
 	}
 
-	iwl.items[level] = items
+	lwi.items[level] = items
 }
 
-func (iwl *LevelsWithItems) itemsAt(level int) []Item {
-	return iwl.items[level]
+func (lwi *LevelsWithItems) itemsAt(level int) []Item {
+	return lwi.items[level]
 }
 
-func (iwl *LevelsWithItems) removeItemsAt(level int) []Item {
-	items := iwl.items[level]
-	delete(iwl.items, level)
+func (lwi *LevelsWithItems) removeItemsAt(level int) []Item {
+	items := lwi.items[level]
+	delete(lwi.items, level)
 	return items
 }
