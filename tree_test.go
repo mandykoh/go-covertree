@@ -126,7 +126,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("saves the tree meta state when it changes", func(t *testing.T) {
-			store := newTestStore()
+			store := newTestStore(distanceBetweenPoints)
 			tree, _ := NewTreeFromStore(store, distanceBetweenPoints)
 
 			// First point should become the initial root at infinity
@@ -289,7 +289,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("saves the tree metadata when it changes", func(t *testing.T) {
-			store := newTestStore()
+			store := newTestStore(distanceBetweenPoints)
 			tree, _ := NewTreeFromStore(store, distanceBetweenPoints)
 
 			points := []Point{
@@ -639,8 +639,8 @@ type testStore struct {
 	savedRootLevel int
 }
 
-func newTestStore() *testStore {
-	return &testStore{inMemoryStore: *newInMemoryStore()}
+func newTestStore(distanceFunc DistanceFunc) *testStore {
+	return &testStore{inMemoryStore: *newInMemoryStore(distanceFunc)}
 }
 
 func (ts *testStore) SaveTree(root Item, rootLevel int) error {
