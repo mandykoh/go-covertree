@@ -10,6 +10,12 @@ See the [API documentation](https://godoc.org/github.com/mandykoh/go-covertree) 
 
 This software is made available under an [MIT license](LICENSE).
 
+
+## Thread safety
+
+[Tree](https://godoc.org/github.com/mandykoh/go-covertree#Tree) instances are thread-safe for readonly access, but should be externally synchronised if concurrent read-write access is required. [Store](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations should observe their own thread-safety considerations.
+
+
 ## Example usage
 
 Define a type to be stored in the tree:
