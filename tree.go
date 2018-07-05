@@ -139,6 +139,8 @@ func (t *Tree) Insert(item Item) (inserted Item, err error) {
 	return
 }
 
+// Remove removes the given item from the tree. If no such item exists in the
+// tree, this has no effect.
 func (t *Tree) Remove(item Item) (err error) {
 	rootDist := t.distanceBetween(item, t.root)
 	cs, err := coverSetWithItem(t.root, rootDist, t.store)
