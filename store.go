@@ -10,6 +10,9 @@ package covertree
 //
 // Store implementations will typically need to know about the type of Items
 // being stored in the tree.
+//
+// Stores should implement distance-identity semantics; two items whose distance
+// is exactly zero should be considered the same item.
 type Store interface {
 
 	// DeleteChild disassociates an item in the store from the specified parent
