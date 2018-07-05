@@ -12,13 +12,14 @@ package covertree
 // being stored in the tree.
 type Store interface {
 
-	// DeleteChild removes an item from the store as a child of the specified
-	// parent item, at the given level. If no such item exists, this operation
-	// should have no effect.
+	// DeleteChild disassociates an item in the store from the specified parent
+	// at the given level. If no such item exists, this operation should have no
+	// effect.
 	//
-	// Implementations are free to completely delete the item itself, but should
-	// bear in mind that any children of the item should continue to exist and
-	// will be re-parented to other items.
+	// Implementations are free to completely delete the item itself along with
+	// any relationships to child items, but should bear in mind that children
+	// should continue to exist as orphans and will be re-parented to other
+	// items.
 	DeleteChild(item, parent Item, level int) error
 
 	// LoadChildren returns the explicit child items of the specified parent
@@ -30,7 +31,13 @@ type Store interface {
 	LoadTree() (root Item, rootLevel int, err error)
 
 	// SaveChild saves an item to the store as a child of the specified parent
-	// item, at the given level.
+	// item, at the given level. It is valid for child items to be re-parented;
+	// if the child already exists in the store, it becomes associated with the
+	// new parent and level.
+	//
+	// Implementations are free to assume that this will only be called for new
+	// or orphaned child items; cleanup of existing associations with parent
+	// items should be performed by DeleteChild.
 	SaveChild(child, parent Item, level int) error
 
 	// SaveTree is called by a Tree to save its metadata.
