@@ -34,8 +34,8 @@ func distanceBetween(a, b Item) float64 {
     p1 := a.(*Point)
     p2 := b.(*Point)
 	
-    distX := math.Abs(p1.X - p2.X)
-    distY := math.Abs(p1.Y - p2.Y)
+    distX := p1.X - p2.X
+    distY := p1.Y - p2.Y
 	
     return math.Sqrt(distX * distX + distY * distY)
 }
