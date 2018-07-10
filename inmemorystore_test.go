@@ -25,12 +25,7 @@ func TestInMemoryStore(t *testing.T) {
 			s := newInMemoryStore(nil)
 			s.AddItem(item, parent, 5)
 
-			levels, ok := s.items[item]
-			if !ok {
-				t.Fatalf("Expected levels to exist for new item %v", item)
-			}
-
-			levels, ok = s.items[parent]
+			levels, ok := s.items[parent]
 			if !ok {
 				t.Fatalf("Expected levels to exist for parent %v", parent)
 			}

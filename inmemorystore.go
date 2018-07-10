@@ -13,7 +13,6 @@ func newInMemoryStore(distanceFunc DistanceFunc) *inMemoryStore {
 }
 
 func (s *inMemoryStore) AddItem(item, parent Item, level int) error {
-	s.levelsFor(item)
 	levels := s.levelsFor(parent)
 	levels[level] = append(levels[level], item)
 	return nil
