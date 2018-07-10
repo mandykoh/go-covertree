@@ -16,47 +16,29 @@ func TestInMemoryStore(t *testing.T) {
 		return math.Abs(a.(*dummyItem).value - b.(*dummyItem).value)
 	}
 
-	t.Run("DeleteChild()", func(t *testing.T) {
-		parent := &dummyItem{"parent", 456.0}
-		item1 := &dummyItem{"thing1", 123.0}
-		item2 := &dummyItem{"thing2", 234.0}
+	t.Run("AddItem()", func(t *testing.T) {
 
-		setup := func() inMemoryStore {
-			return inMemoryStore{
-				distanceBetween: distanceBetween,
-				items: map[Item]map[int][]Item{
-					parent: {
-						7: {item1, item2},
-					},
-				},
+		t.Run("adds an entry for a new child item", func(t *testing.T) {
+			item := &dummyItem{"child", 123.0}
+			parent := &dummyItem{"parent", 456.0}
+
+			s := newInMemoryStore(nil)
+			s.AddItem(item, parent, 5)
+
+			levels, ok := s.items[item]
+			if !ok {
+				t.Fatalf("Expected levels to exist for new item %v", item)
 			}
-		}
 
-		t.Run("removes an existing child", func(t *testing.T) {
-			s := setup()
-			s.DeleteChild(item2, parent, 7)
-
-			items := s.levelsFor(parent)[7]
-
-			if expected, actual := 1, len(items); expected != actual {
-				t.Errorf("Expected one child item after deletion but got %d", actual)
+			levels, ok = s.items[parent]
+			if !ok {
+				t.Fatalf("Expected levels to exist for parent %v", parent)
 			}
-			if expected, actual := item1, items[0]; expected != actual {
-				t.Errorf("Expected remaining child to be %v but was %v", expected, actual)
+			if actual, expected := len(levels[5]), 1; actual != expected {
+				t.Errorf("Expected 1 item in level but found %d", actual)
 			}
-		})
-
-		t.Run("removes an existing child by distance", func(t *testing.T) {
-			s := setup()
-			s.DeleteChild(&dummyItem{"something", 234.0}, parent, 7)
-
-			items := s.levelsFor(parent)[7]
-
-			if expected, actual := 1, len(items); expected != actual {
-				t.Errorf("Expected one child item after deletion but got %d", actual)
-			}
-			if expected, actual := item1, items[0]; expected != actual {
-				t.Errorf("Expected remaining child to be %v but was %v", expected, actual)
+			if actual, expected := levels[5][0].(*dummyItem), item; actual != expected {
+				t.Errorf("Expected item %f but found %f", expected.value, actual.value)
 			}
 		})
 	})
@@ -112,21 +94,99 @@ func TestInMemoryStore(t *testing.T) {
 		})
 	})
 
-	t.Run("SaveChild()", func(t *testing.T) {
+	t.Run("RemoveItem()", func(t *testing.T) {
+		parent := &dummyItem{"parent", 456.0}
+		item1 := &dummyItem{"thing1", 123.0}
+		item2 := &dummyItem{"thing2", 234.0}
 
-		t.Run("adds an entry for a new child item", func(t *testing.T) {
+		setup := func() inMemoryStore {
+			return inMemoryStore{
+				distanceBetween: distanceBetween,
+				items: map[Item]map[int][]Item{
+					parent: {
+						7: {item1, item2},
+					},
+					item2: {},
+				},
+			}
+		}
+
+		t.Run("removes an existing child", func(t *testing.T) {
+			s := setup()
+			s.RemoveItem(item2, parent, 7)
+
+			items := s.levelsFor(parent)[7]
+
+			if expected, actual := 1, len(items); expected != actual {
+				t.Errorf("Expected one child item after deletion but got %d", actual)
+			}
+			if expected, actual := item1, items[0]; expected != actual {
+				t.Errorf("Expected remaining child to be %v but was %v", expected, actual)
+			}
+			if _, childEntriesExist := s.items[item2]; childEntriesExist {
+				t.Errorf("Expected child entries for removed item to be deleted")
+			}
+		})
+
+		t.Run("removes an existing child by distance", func(t *testing.T) {
+			s := setup()
+			s.RemoveItem(&dummyItem{"something", 234.0}, parent, 7)
+
+			items := s.levelsFor(parent)[7]
+
+			if expected, actual := 1, len(items); expected != actual {
+				t.Errorf("Expected one child item after deletion but got %d", actual)
+			}
+			if expected, actual := item1, items[0]; expected != actual {
+				t.Errorf("Expected remaining child to be %v but was %v", expected, actual)
+			}
+		})
+	})
+
+	t.Run("UpdateItem()", func(t *testing.T) {
+
+		t.Run("saves node at the root", func(t *testing.T) {
+			item := &dummyItem{"child", 123.0}
+
+			s := newInMemoryStore(nil)
+			s.UpdateItem(item, nil, 5)
+
+			levels, ok := s.items[nil]
+			if !ok {
+				t.Fatalf("Expected levels to exist at root")
+			}
+			if actual, expected := len(levels[5]), 1; actual != expected {
+				t.Errorf("Expected 1 item in level but found %d", actual)
+			}
+			if actual, expected := levels[5][0].(*dummyItem), item; actual != expected {
+				t.Errorf("Expected item %f but found %f", expected.value, actual.value)
+			}
+
+			s.UpdateItem(item, nil, 7)
+
+			levels, ok = s.items[nil]
+			if !ok {
+				t.Fatalf("Expected levels to exist at root")
+			}
+			if actual, expected := len(levels[5]), 0; actual != expected {
+				t.Errorf("Expected item to be gone from previous level but found %d", actual)
+			}
+			if actual, expected := len(levels[7]), 1; actual != expected {
+				t.Errorf("Expected 1 item in level but found %d", actual)
+			}
+			if actual, expected := levels[7][0].(*dummyItem), item; actual != expected {
+				t.Errorf("Expected item %f but found %f", expected.value, actual.value)
+			}
+		})
+
+		t.Run("adds item as a child of the parent", func(t *testing.T) {
 			item := &dummyItem{"child", 123.0}
 			parent := &dummyItem{"parent", 456.0}
 
 			s := newInMemoryStore(nil)
-			s.SaveChild(item, parent, 5)
+			s.UpdateItem(item, parent, 5)
 
-			levels, ok := s.items[item]
-			if !ok {
-				t.Fatalf("Expected levels to exist for new item %v", item)
-			}
-
-			levels, ok = s.items[parent]
+			levels, ok := s.items[parent]
 			if !ok {
 				t.Fatalf("Expected levels to exist for parent %v", parent)
 			}
@@ -135,49 +195,6 @@ func TestInMemoryStore(t *testing.T) {
 			}
 			if actual, expected := levels[5][0].(*dummyItem), item; actual != expected {
 				t.Errorf("Expected item %f but found %f", expected.value, actual.value)
-			}
-		})
-
-		t.Run("overwrites an entry for an existing item", func(t *testing.T) {
-			item1 := &dummyItem{"child", 123.0}
-			parent := &dummyItem{"parent", 456.0}
-
-			s := newInMemoryStore(nil)
-			s.SaveChild(item1, parent, 5)
-
-			item1.value = 234.0
-			s.SaveChild(item1, parent, 5)
-
-			levels, ok := s.items[parent]
-			if !ok {
-				t.Fatalf("Expected levels to exist for parent %v", parent)
-			}
-			if actual, expected := len(levels[5]), 1; actual != expected {
-				t.Errorf("Expected 1 item in level but found %d", actual)
-			}
-			if actual, expected := levels[5][0].(*dummyItem).value, 234.0; actual != expected {
-				t.Errorf("Expected item %f but found %f", expected, actual)
-			}
-		})
-
-		t.Run("overwrites an entry for an existing item by distance", func(t *testing.T) {
-			item1 := &dummyItem{"child", 123.0}
-			parent := &dummyItem{"parent", 456.0}
-
-			s := newInMemoryStore(distanceBetween)
-			s.SaveChild(item1, parent, 5)
-
-			s.SaveChild(&dummyItem{"new value", 123.0}, parent, 5)
-
-			levels, ok := s.items[parent]
-			if !ok {
-				t.Fatalf("Expected levels to exist for parent %v", parent)
-			}
-			if actual, expected := len(levels[5]), 1; actual != expected {
-				t.Errorf("Expected 1 item in level but found %d", actual)
-			}
-			if actual, expected := levels[5][0].(*dummyItem).id, "new value"; actual != expected {
-				t.Errorf("Expected item %v but found %v", expected, actual)
 			}
 		})
 	})

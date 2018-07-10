@@ -15,7 +15,20 @@ package covertree
 // is exactly zero should be considered the same item.
 type Store interface {
 
-	// DeleteChild disassociates an item in the store from the specified parent
+	// AddItem saves an item to the store as a child of the specified parent
+	// item, at the given level. The parent may be nil, indicating that an item
+	// is being added at the root of the tree.
+	//
+	// Implementations are free to assume that this will only be called for new,
+	// never-before-seen items.
+	AddItem(item, parent Item, level int) error
+
+	// LoadChildren returns the explicit child items of the specified parent
+	// item along with their levels. If parent is nil, this is expected to
+	// return the root item (which is a child of nil).
+	LoadChildren(parent Item) (LevelsWithItems, error)
+
+	// RemoveItem disassociates an item in the store from the specified parent
 	// at the given level. If no such item exists, this operation should have no
 	// effect.
 	//
@@ -23,26 +36,13 @@ type Store interface {
 	// any relationships to child items, but should bear in mind that children
 	// should continue to exist as orphans and will be re-parented to other
 	// items.
-	DeleteChild(item, parent Item, level int) error
+	RemoveItem(item, parent Item, level int) error
 
-	// LoadChildren returns the explicit child items of the specified parent
-	// item along with their levels.
-	LoadChildren(parent Item) (LevelsWithItems, error)
-
-	// LoadTree is called by NewTreeFromStore to retrieve the metadata for the
-	// Tree instance being managed by the Store.
-	LoadTree() (root Item, rootLevel int, err error)
-
-	// SaveChild saves an item to the store as a child of the specified parent
-	// item, at the given level. It is valid for child items to be re-parented;
-	// if the child already exists in the store, it becomes associated with the
-	// new parent and level.
+	// UpdateItem updates the parent and level of a given item. It is valid for
+	// child items to be re-parented; the item, which must already exist in the
+	// store, is associated with the new parent and level.
 	//
-	// Implementations are free to assume that this will only be called for new
-	// or orphaned child items; cleanup of existing associations with parent
-	// items should be performed by DeleteChild.
-	SaveChild(child, parent Item, level int) error
-
-	// SaveTree is called by a Tree to save its metadata.
-	SaveTree(root Item, rootLevel int) error
+	// Implementations are free to assume that this will only be called for
+	// items which have previously been added via AddItem.
+	UpdateItem(item, parent Item, level int) error
 }

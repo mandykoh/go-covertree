@@ -47,11 +47,10 @@ Create a [`Tree`](https://godoc.org/github.com/mandykoh/go-covertree#Tree). A tr
 tree := covertree.NewInMemoryTree(distanceBetween)
 ```
 
-Custom [`Store`](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations can also use the basic Tree constructors to create trees:
+Custom [`Store`](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations can also use the basic Tree constructor to create trees:
 
 ```go
-tree, err := covertree.NewEmptyTreeWithStore(pointStore, distanceBetween)  // Creates a new empty tree
-tree, err := covertree.NewTreeFromStore(pointStore, distanceBetween)       // Creates a tree that loads itself from a store
+tree, err := covertree.NewTreeWithStore(pointStore, distanceBetween)       // Creates a tree that is backed by a specific store
 ```
 
 [Insert](https://godoc.org/github.com/mandykoh/go-covertree#Tree.Insert) some things into the tree:

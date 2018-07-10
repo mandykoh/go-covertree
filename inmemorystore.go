@@ -12,15 +12,10 @@ func newInMemoryStore(distanceFunc DistanceFunc) *inMemoryStore {
 	}
 }
 
-func (s *inMemoryStore) DeleteChild(item, parent Item, level int) error {
-	levels := s.items[parent]
-	for i, levelItem := range levels[level] {
-		if levelItem == item || s.distanceBetween(levelItem, item) == 0 {
-			levels[level] = append(levels[level][:i], levels[level][i+1:]...)
-			return nil
-		}
-	}
-
+func (s *inMemoryStore) AddItem(item, parent Item, level int) error {
+	s.levelsFor(item)
+	levels := s.levelsFor(parent)
+	levels[level] = append(levels[level], item)
 	return nil
 }
 
@@ -32,26 +27,26 @@ func (s *inMemoryStore) LoadChildren(parent Item) (result LevelsWithItems, err e
 	return
 }
 
-func (s *inMemoryStore) LoadTree() (root Item, rootLevel int, err error) {
-	return nil, 0, nil
-}
-
-func (s *inMemoryStore) SaveChild(child, parent Item, level int) error {
-	s.levelsFor(child)
-
-	levels := s.levelsFor(parent)
+func (s *inMemoryStore) RemoveItem(item, parent Item, level int) error {
+	levels := s.items[parent]
 	for i, levelItem := range levels[level] {
-		if levelItem == child || s.distanceBetween(levelItem, child) == 0 {
-			levels[level][i] = child
+		if levelItem == item || s.distanceBetween(levelItem, item) == 0 {
+			levels[level] = append(levels[level][:i], levels[level][i+1:]...)
+			delete(s.items, item)
 			return nil
 		}
 	}
 
-	levels[level] = append(levels[level], child)
 	return nil
 }
 
-func (s *inMemoryStore) SaveTree(root Item, rootLevel int) error {
+func (s *inMemoryStore) UpdateItem(item, parent Item, level int) error {
+	if parent == nil {
+		delete(s.items, parent)
+	}
+
+	levels := s.levelsFor(parent)
+	levels[level] = append(levels[level], item)
 	return nil
 }
 
@@ -69,6 +64,6 @@ func (s *inMemoryStore) levelsFor(item Item) map[int][]Item {
 // store. The tree will use the specified function for determining the distance
 // between items.
 func NewInMemoryTree(distanceFunc DistanceFunc) *Tree {
-	tree, _ := NewEmptyTreeWithStore(newInMemoryStore(distanceFunc), distanceFunc)
+	tree, _ := NewTreeWithStore(newInMemoryStore(distanceFunc), distanceFunc)
 	return tree
 }

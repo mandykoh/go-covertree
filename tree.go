@@ -9,39 +9,16 @@ import (
 // Trees should generally not be created except via NewTreeFromStore, and then
 // only by a Store.
 type Tree struct {
-	root            Item
-	rootLevel       int
 	distanceBetween DistanceFunc
 	store           Store
 }
 
-// NewEmptyTreeWithStore creates an empty Tree using the specified store.
+// NewTreeWithStore creates and initialises a Tree using the specified store.
 //
 // distanceFunc is the function used by the tree to determine the distance
 // between two items.
-func NewEmptyTreeWithStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
+func NewTreeWithStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
 	return &Tree{
-		root:            nil,
-		rootLevel:       math.MaxInt32,
-		distanceBetween: distanceFunc,
-		store:           store,
-	}, nil
-}
-
-// NewTreeFromStore creates and initialises a Tree from the specified store by
-// calling the store’s LoadTree method.
-//
-// distanceFunc is the function used by the tree to determine the distance
-// between two items.
-func NewTreeFromStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
-	root, rootLevel, err := store.LoadTree()
-	if err != nil {
-		return nil, err
-	}
-
-	return &Tree{
-		root:            root,
-		rootLevel:       rootLevel,
 		distanceBetween: distanceFunc,
 		store:           store,
 	}, nil
@@ -56,16 +33,18 @@ func NewTreeFromStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
 // If no items are found matching the given criteria, an empty result set is
 // returned.
 func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
-	if t.root == nil {
+	root, rootLevel, err := t.loadRoot()
+
+	if root == nil {
 		return
 	}
 
-	cs, err := coverSetWithItem(t.root, t.distanceBetween(t.root, query), t.store)
+	cs, err := coverSetWithItem(root, t.distanceBetween(root, query), t.store)
 	if err != nil {
 		return nil, err
 	}
 
-	for level := t.rootLevel; !cs.atBottom(); level-- {
+	for level := rootLevel; !cs.atBottom(); level-- {
 		distThreshold := distanceForLevel(level)
 
 		closest := cs.closest(maxResults, maxDistance)
@@ -96,32 +75,32 @@ func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (res
 // inserted, the item in the tree is returned. Otherwise, the newly inserted
 // item is returned instead.
 func (t *Tree) Insert(item Item) (inserted Item, err error) {
+	root, rootLevel, err := t.loadRoot()
 
 	// Tree is empty - add item as the new root at infinity
-	if t.root == nil {
-		err := t.store.SaveTree(item, math.MaxInt32)
-		if err == nil {
-			t.root = item
-			t.rootLevel = math.MaxInt32
+	if root == nil {
+		err := t.store.AddItem(item, nil, math.MaxInt32)
+		if err != nil {
+			return nil, err
 		}
 		return item, err
 	}
 
-	cs, err := coverSetWithItem(t.root, t.distanceBetween(t.root, item), t.store)
+	cs, err := coverSetWithItem(root, t.distanceBetween(root, item), t.store)
 	if err != nil {
 		return nil, err
 	}
 
 	// Tree only has a root at infinity - move root to appropriate level for the new item
-	if t.rootLevel == math.MaxInt32 {
-		t.rootLevel = levelForDistance(cs[0].parent.Distance)
-		err = t.store.SaveTree(t.root, t.rootLevel)
+	if rootLevel == math.MaxInt32 {
+		rootLevel = levelForDistance(cs[0].parent.Distance)
+		err = t.store.UpdateItem(root, nil, rootLevel)
 		if err != nil {
 			return
 		}
 	}
 
-	inserted, err = t.insert(item, cs, t.rootLevel)
+	inserted, err = t.insert(item, cs, rootLevel)
 
 	if err == nil {
 		if inserted == nil {
@@ -129,9 +108,9 @@ func (t *Tree) Insert(item Item) (inserted Item, err error) {
 			// No covering parent found - promote the current root to cover the
 			// new item and insert it as a child.
 
-			err = t.hoistRootForChild(item, math.MinInt32)
+			rootLevel, err = t.hoistRootForChild(item, math.MinInt32, root, rootLevel)
 			if err == nil {
-				err = t.store.SaveTree(t.root, t.rootLevel)
+				err = t.store.UpdateItem(root, nil, rootLevel)
 			}
 		}
 	}
@@ -142,26 +121,28 @@ func (t *Tree) Insert(item Item) (inserted Item, err error) {
 // Remove removes the given item from the tree. If no such item exists in the
 // tree, this has no effect.
 func (t *Tree) Remove(item Item) (err error) {
-	rootDist := t.distanceBetween(item, t.root)
-	cs, err := coverSetWithItem(t.root, rootDist, t.store)
+	root, rootLevel, err := t.loadRoot()
+
+	rootDist := t.distanceBetween(item, root)
+	cs, err := coverSetWithItem(root, rootDist, t.store)
 	if err != nil {
 		return err
 	}
 
 	if rootDist == 0 {
-		t.root = nil
+		root = nil
 
 		for level, items := range cs[0].children.items {
 			for _, item := range items {
-				if t.root == nil {
+				if root == nil {
 
 					// Promote one child to be the new root
-					t.root = item
+					root = item
 
 				} else {
 
 					// Add all remaining children as children of the new root
-					err = t.hoistRootForChild(item, level)
+					rootLevel, err = t.hoistRootForChild(item, level, root, rootLevel)
 					if err != nil {
 						return
 					}
@@ -169,23 +150,25 @@ func (t *Tree) Remove(item Item) (err error) {
 			}
 		}
 
-		err = t.store.SaveTree(t.root, t.rootLevel)
+		err = t.store.UpdateItem(root, nil, rootLevel)
 
 	} else {
-		oldRootLevel := t.rootLevel
-
 		var orphans []Item
-		orphans, err = t.remove(item, cs, t.rootLevel)
+		orphans, err = t.remove(item, cs, rootLevel)
 
-		for _, orphan := range orphans {
-			err = t.hoistRootForChild(orphan, math.MinInt32)
-			if err != nil {
-				return err
+		if err == nil {
+			oldRootLevel := rootLevel
+
+			for _, orphan := range orphans {
+				rootLevel, err = t.hoistRootForChild(orphan, math.MinInt32, root, rootLevel)
+				if err != nil {
+					return err
+				}
 			}
-		}
 
-		if t.rootLevel != oldRootLevel {
-			err = t.store.SaveTree(t.root, t.rootLevel)
+			if rootLevel != oldRootLevel {
+				err = t.store.UpdateItem(root, nil, rootLevel)
+			}
 		}
 	}
 
@@ -200,7 +183,7 @@ nextOrphan:
 		for _, parent := range parents {
 			if parent.parent.Item != query && t.distanceBetween(item, parent.parent.Item) <= distThreshold {
 
-				err := t.store.SaveChild(item, parent.parent.Item, childLevel)
+				err := t.store.UpdateItem(item, parent.parent.Item, childLevel)
 				if err != nil {
 					return nil, err
 				}
@@ -216,10 +199,10 @@ nextOrphan:
 	return orphans[:remaining], nil
 }
 
-func (t *Tree) hoistRootForChild(child Item, minChildLevel int) (err error) {
-	dist := t.distanceBetween(t.root, child)
+func (t *Tree) hoistRootForChild(child Item, minChildLevel int, root Item, rootLevel int) (newRootLevel int, err error) {
+	dist := t.distanceBetween(root, child)
 	childLevel := levelForDistance(dist)
-	newRootLevel := t.rootLevel
+	newRootLevel = rootLevel
 
 	if childLevel < minChildLevel {
 		childLevel = minChildLevel
@@ -228,10 +211,7 @@ func (t *Tree) hoistRootForChild(child Item, minChildLevel int) (err error) {
 		newRootLevel = childLevel + 1
 	}
 
-	err = t.store.SaveChild(child, t.root, childLevel)
-	if err == nil {
-		t.rootLevel = newRootLevel
-	}
+	err = t.store.UpdateItem(child, root, childLevel)
 	return
 }
 
@@ -259,13 +239,28 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int) (inserted Item, e
 		// No parent was found among the children - look for a suitable parent at this level
 		for _, csItem := range coverSet {
 			if csItem.parent.Distance <= distThreshold {
-				err := t.store.SaveChild(item, csItem.parent.Item, level-1)
+				err := t.store.AddItem(item, csItem.parent.Item, level-1)
 				return item, err
 			}
 		}
 	}
 
 	return nil, nil
+}
+
+func (t *Tree) loadRoot() (root Item, rootLevel int, err error) {
+	rootLevels, err := t.store.LoadChildren(nil)
+	if err != nil {
+		return
+	}
+
+	for level, items := range rootLevels.items {
+		root = items[0]
+		rootLevel = level
+		break
+	}
+
+	return
 }
 
 func (t *Tree) remove(item Item, coverSet coverSet, level int) (orphans []Item, err error) {
@@ -281,7 +276,7 @@ func (t *Tree) remove(item Item, coverSet coverSet, level int) (orphans []Item, 
 				found = true
 
 				for _, csItem := range coverSet {
-					err = t.store.DeleteChild(childCoverSet[i].parent.Item, csItem.parent.Item, level-1)
+					err = t.store.RemoveItem(childCoverSet[i].parent.Item, csItem.parent.Item, level-1)
 					if err != nil {
 						return
 					}
