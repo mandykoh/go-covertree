@@ -127,20 +127,6 @@ func TestInMemoryStore(t *testing.T) {
 				t.Errorf("Expected child entries for removed item to be deleted")
 			}
 		})
-
-		t.Run("removes an existing child by distance", func(t *testing.T) {
-			s := setup()
-			s.RemoveItem(&dummyItem{"something", 234.0}, parent, 7)
-
-			items := s.levelsFor(parent)[7]
-
-			if expected, actual := 1, len(items); expected != actual {
-				t.Errorf("Expected one child item after deletion but got %d", actual)
-			}
-			if expected, actual := item1, items[0]; expected != actual {
-				t.Errorf("Expected remaining child to be %v but was %v", expected, actual)
-			}
-		})
 	})
 
 	t.Run("UpdateItem()", func(t *testing.T) {
