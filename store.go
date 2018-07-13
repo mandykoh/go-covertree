@@ -35,7 +35,7 @@ type Store interface {
 	// Implementations are free to completely delete the item itself along with
 	// any relationships to child items, but should bear in mind that children
 	// should continue to exist as orphans and will be re-parented to other
-	// items.
+	// items (via calls to UpdateItem).
 	RemoveItem(item, parent Item, level int) error
 
 	// UpdateItem updates the parent and level of a given item. It is valid for
