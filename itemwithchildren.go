@@ -1,17 +1,18 @@
 package covertree
 
 type itemWithChildren struct {
-	parent   ItemWithDistance
-	children LevelsWithItems
+	withDistance ItemWithDistance
+	parent       Item
+	children     LevelsWithItems
 }
 
-func itemWithChildrenFromStore(item Item, distance float64, store Store) (iwc itemWithChildren, err error) {
+func itemWithChildrenFromStore(item, parent Item, distance float64, store Store) (iwc itemWithChildren, err error) {
 	children, err := store.LoadChildren(item)
 	if err != nil {
 		return
 	}
 
-	return itemWithChildren{ItemWithDistance{item, distance}, children}, nil
+	return itemWithChildren{ItemWithDistance{item, distance}, parent, children}, nil
 }
 
 func (iwc *itemWithChildren) hasChildren() bool {

@@ -17,10 +17,10 @@ func TestCoverSet(t *testing.T) {
 
 			if len(expectedResults) < len(actualResults) {
 				for i, c := range expectedResults {
-					if expected, actual := c.parent.Item, actualResults[i].parent.Item; expected != actual {
+					if expected, actual := c.withDistance.Item, actualResults[i].withDistance.Item; expected != actual {
 						t.Errorf("Expected result %d to be %v but was %v", i, expected, actual)
 					}
-					if expected, actual := c.parent.Distance, actualResults[i].parent.Distance; expected != actual {
+					if expected, actual := c.withDistance.Distance, actualResults[i].withDistance.Distance; expected != actual {
 						t.Errorf("Expected result %d to have distance %g but was %g", i, expected, actual)
 					}
 				}
@@ -29,23 +29,23 @@ func TestCoverSet(t *testing.T) {
 
 		t.Run("returns the child coverset which excludes non-covering items", func(t *testing.T) {
 			cs := coverSet{
-				{parent: ItemWithDistance{"a", 0.0}},
-				{parent: ItemWithDistance{"b", 10.0}},
-				{parent: ItemWithDistance{"c", 1.0}},
+				{withDistance: ItemWithDistance{"a", 0.0}},
+				{withDistance: ItemWithDistance{"b", 10.0}},
+				{withDistance: ItemWithDistance{"c", 1.0}},
 			}
 
 			child, _ := cs.child("a", 2.0, 0, nil, nil)
 
 			expectResults(t, child, coverSet{
-				{parent: ItemWithDistance{"a", 0.0}},
-				{parent: ItemWithDistance{"c", 1.0}},
+				{withDistance: ItemWithDistance{"a", 0.0}},
+				{withDistance: ItemWithDistance{"c", 1.0}},
 			})
 		})
 
 		t.Run("promotes covering children at the requested level and excludes non-covering children", func(t *testing.T) {
 			cs := coverSet{
-				{parent: ItemWithDistance{"a", 0.0}, children: LevelsWithItems{items: map[int][]Item{3: {"c", "d"}}}},
-				{parent: ItemWithDistance{"b", 10.0}},
+				{withDistance: ItemWithDistance{"a", 0.0}, children: LevelsWithItems{items: map[int][]Item{3: {"c", "d"}}}},
+				{withDistance: ItemWithDistance{"b", 10.0}},
 			}
 
 			mockDistFunc := func(a, b Item) float64 {
@@ -59,8 +59,8 @@ func TestCoverSet(t *testing.T) {
 			child, _ := cs.child("a", 5.0, 3, mockDistFunc, newInMemoryStore(nil))
 
 			expectResults(t, child, coverSet{
-				{parent: ItemWithDistance{"a", 0.0}},
-				{parent: ItemWithDistance{"c", 5.0}},
+				{withDistance: ItemWithDistance{"a", 0.0}},
+				{withDistance: ItemWithDistance{"c", 5.0}},
 			})
 
 			if cs[0].hasChildren() {
@@ -91,11 +91,11 @@ func TestCoverSet(t *testing.T) {
 
 		t.Run("returns the specified number of items from closest to furthest", func(t *testing.T) {
 			cs := coverSet{
-				{parent: ItemWithDistance{"a", 5.0}},
-				{parent: ItemWithDistance{"c", 3.0}},
-				{parent: ItemWithDistance{"b", 4.0}},
-				{parent: ItemWithDistance{"e", 1.0}},
-				{parent: ItemWithDistance{"d", 2.0}},
+				{withDistance: ItemWithDistance{"a", 5.0}},
+				{withDistance: ItemWithDistance{"c", 3.0}},
+				{withDistance: ItemWithDistance{"b", 4.0}},
+				{withDistance: ItemWithDistance{"e", 1.0}},
+				{withDistance: ItemWithDistance{"d", 2.0}},
 			}
 
 			results := cs.closest(3, math.MaxFloat64)
@@ -109,9 +109,9 @@ func TestCoverSet(t *testing.T) {
 
 		t.Run("returns all available results up to the number requested", func(t *testing.T) {
 			cs := coverSet{
-				{parent: ItemWithDistance{"a", 5.0}},
-				{parent: ItemWithDistance{"c", 3.0}},
-				{parent: ItemWithDistance{"b", 4.0}},
+				{withDistance: ItemWithDistance{"a", 5.0}},
+				{withDistance: ItemWithDistance{"c", 3.0}},
+				{withDistance: ItemWithDistance{"b", 4.0}},
 			}
 
 			results := cs.closest(4, math.MaxFloat64)
@@ -125,9 +125,9 @@ func TestCoverSet(t *testing.T) {
 
 		t.Run("returns all available results up to the distance limit", func(t *testing.T) {
 			cs := coverSet{
-				{parent: ItemWithDistance{"a", 5.0}},
-				{parent: ItemWithDistance{"c", 3.0}},
-				{parent: ItemWithDistance{"b", 4.0}},
+				{withDistance: ItemWithDistance{"a", 5.0}},
+				{withDistance: ItemWithDistance{"c", 3.0}},
+				{withDistance: ItemWithDistance{"b", 4.0}},
 			}
 
 			results := cs.closest(3, 4.0)

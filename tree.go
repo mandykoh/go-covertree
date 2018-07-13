@@ -39,7 +39,7 @@ func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (res
 		return
 	}
 
-	cs, err := coverSetWithItem(root, t.distanceBetween(root, query), t.store)
+	cs, err := coverSetWithItem(root, nil, t.distanceBetween(root, query), t.store)
 	if err != nil {
 		return nil, err
 	}
@@ -86,14 +86,14 @@ func (t *Tree) Insert(item Item) (inserted Item, err error) {
 		return item, err
 	}
 
-	cs, err := coverSetWithItem(root, t.distanceBetween(root, item), t.store)
+	cs, err := coverSetWithItem(root, nil, t.distanceBetween(root, item), t.store)
 	if err != nil {
 		return nil, err
 	}
 
 	// Tree only has a root at infinity - move root to appropriate level for the new item
 	if rootLevel == math.MaxInt32 {
-		rootLevel = levelForDistance(cs[0].parent.Distance)
+		rootLevel = levelForDistance(cs[0].withDistance.Distance)
 		err = t.store.UpdateItem(root, nil, rootLevel)
 		if err != nil {
 			return
@@ -124,7 +124,7 @@ func (t *Tree) Remove(item Item) (err error) {
 	root, rootLevel, err := t.loadRoot()
 
 	rootDist := t.distanceBetween(item, root)
-	cs, err := coverSetWithItem(root, rootDist, t.store)
+	cs, err := coverSetWithItem(root, nil, rootDist, t.store)
 	if err != nil {
 		return err
 	}
@@ -181,9 +181,9 @@ func (t *Tree) adoptOrphans(orphans []Item, query Item, parents coverSet, distTh
 nextOrphan:
 	for _, item := range orphans {
 		for _, parent := range parents {
-			if parent.parent.Item != query && t.distanceBetween(item, parent.parent.Item) <= distThreshold {
+			if parent.withDistance.Item != query && t.distanceBetween(item, parent.withDistance.Item) <= distThreshold {
 
-				err := t.store.UpdateItem(item, parent.parent.Item, childLevel)
+				err := t.store.UpdateItem(item, parent.withDistance.Item, childLevel)
 				if err != nil {
 					return nil, err
 				}
@@ -226,8 +226,8 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int) (inserted Item, e
 	if len(childCoverSet) > 0 {
 
 		// Only one matching child which is at zero distance - item is a duplicate so return the original
-		if childCoverSet[0].parent.Distance == 0 {
-			return childCoverSet[0].parent.Item, nil
+		if childCoverSet[0].withDistance.Distance == 0 {
+			return childCoverSet[0].withDistance.Item, nil
 		}
 
 		// Look for a suitable parent amongst the children
@@ -238,8 +238,8 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int) (inserted Item, e
 
 		// No parent was found among the children - look for a suitable parent at this level
 		for _, csItem := range coverSet {
-			if csItem.parent.Distance <= distThreshold {
-				err := t.store.AddItem(item, csItem.parent.Item, level-1)
+			if csItem.withDistance.Distance <= distThreshold {
+				err := t.store.AddItem(item, csItem.withDistance.Item, level-1)
 				return item, err
 			}
 		}
@@ -272,14 +272,12 @@ func (t *Tree) remove(item Item, coverSet coverSet, level int) (orphans []Item, 
 		found := false
 
 		for i := range childCoverSet {
-			if childCoverSet[i].parent.Distance == 0 {
+			if childCoverSet[i].withDistance.Distance == 0 {
 				found = true
 
-				for _, csItem := range coverSet {
-					err = t.store.RemoveItem(childCoverSet[i].parent.Item, csItem.parent.Item, level-1)
-					if err != nil {
-						return
-					}
+				err = t.store.RemoveItem(childCoverSet[i].withDistance.Item, childCoverSet[i].parent, level-1)
+				if err != nil {
+					return
 				}
 
 				for _, child := range childCoverSet[i].children.items {
