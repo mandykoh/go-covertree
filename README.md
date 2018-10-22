@@ -15,8 +15,6 @@ This software is made available under an [MIT license](LICENSE).
 
 [Tree](https://godoc.org/github.com/mandykoh/go-covertree#Tree) instances are thread-safe for readonly access, but should be externally synchronised if concurrent read-write access is required. [Store](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations should observe their own thread-safety considerations.
 
-The provided in-memory store implementation is synchronised for concurrent use.
-
 
 ## Example usage
 
