@@ -2,6 +2,7 @@ package covertree
 
 import (
 	"math"
+	"sync"
 	"testing"
 )
 
@@ -178,5 +179,66 @@ func TestInMemoryStore(t *testing.T) {
 				t.Errorf("Expected item %f but found %f", expected.value, actual.value)
 			}
 		})
+	})
+
+	t.Run("operations are thread-safe", func(t *testing.T) {
+		itemCount := 1000
+
+		parent := &dummyItem{"parent", 0.0}
+
+		s := newInMemoryStore(nil)
+
+		var doneGroup sync.WaitGroup
+		doneGroup.Add(itemCount)
+
+		for i := 0; i < itemCount; i++ {
+			level := i % 2
+
+			go func() {
+				item := &dummyItem{string(i), float64(i)}
+				s.AddItem(item, parent, level)
+
+				go func() {
+					levels, _ := s.LoadChildren(parent)
+					items := levels.itemsAt(level)
+					found := false
+					for _, it := range items {
+						if it == item {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						t.Errorf("Expected to find newly added item %s but could not", item.id)
+					}
+
+					go func() {
+						s.UpdateItem(item, parent, level+2)
+
+						go func() {
+							s.RemoveItem(item, parent, level)
+							doneGroup.Done()
+						}()
+					}()
+				}()
+			}()
+		}
+
+		doneGroup.Wait()
+
+		levels, _ := s.items[parent]
+		if actual, expected := len(levels[0]), 0; actual != expected {
+			t.Errorf("Expected %d items in level %d but found %d", expected, 0, actual)
+		}
+		if actual, expected := len(levels[1]), 0; actual != expected {
+			t.Errorf("Expected %d items in level %d but found %d", expected, 1, actual)
+		}
+		if actual, expected := len(levels[2]), itemCount/2; actual != expected {
+			t.Errorf("Expected %d items in level %d but found %d", expected, 2, actual)
+		}
+		if actual, expected := len(levels[3]), itemCount/2; actual != expected {
+			t.Errorf("Expected %d items in level %d but found %d", expected, 3, actual)
+		}
 	})
 }

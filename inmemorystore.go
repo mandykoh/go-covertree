@@ -1,8 +1,13 @@
 package covertree
 
+import (
+	"sync"
+)
+
 type inMemoryStore struct {
 	distanceBetween DistanceFunc
 	items           map[Item]map[int][]Item
+	itemLock        sync.RWMutex
 }
 
 func newInMemoryStore(distanceFunc DistanceFunc) *inMemoryStore {
@@ -17,6 +22,9 @@ func (s *inMemoryStore) AddItem(item, parent Item, level int) error {
 }
 
 func (s *inMemoryStore) LoadChildren(parent Item) (result LevelsWithItems, err error) {
+	s.itemLock.RLock()
+	defer s.itemLock.RUnlock()
+
 	for level, items := range s.items[parent] {
 		result.Set(level, items)
 	}
@@ -25,6 +33,9 @@ func (s *inMemoryStore) LoadChildren(parent Item) (result LevelsWithItems, err e
 }
 
 func (s *inMemoryStore) RemoveItem(item, parent Item, level int) error {
+	s.itemLock.Lock()
+	defer s.itemLock.Unlock()
+
 	levels := s.items[parent]
 	for i, levelItem := range levels[level] {
 		if levelItem == item {
@@ -38,6 +49,9 @@ func (s *inMemoryStore) RemoveItem(item, parent Item, level int) error {
 }
 
 func (s *inMemoryStore) UpdateItem(item, parent Item, level int) error {
+	s.itemLock.Lock()
+	defer s.itemLock.Unlock()
+
 	if parent == nil {
 		delete(s.items, parent)
 	}
