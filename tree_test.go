@@ -34,7 +34,7 @@ func TestTree(t *testing.T) {
 		t.Run("returns the only result for tree with a single root node", func(t *testing.T) {
 			tree := NewInMemoryTree(distanceBetweenPoints)
 			p := randomPoint()
-			tree.Insert(&p)
+			_, _ = tree.Insert(&p)
 
 			query := randomPoint()
 			results, err := tree.FindNearest(&query, 2, math.MaxFloat64)
@@ -53,7 +53,7 @@ func TestTree(t *testing.T) {
 				{2.0, 0.0, 0.0},
 				{3.0, 0.0, 0.0},
 			}
-			insertPoints(points, tree)
+			_, _ = insertPoints(points, tree)
 
 			t.Run("returns available results when less than the maximum requested", func(t *testing.T) {
 				query := Point{0.0, 0.0, 0.0}
@@ -187,9 +187,9 @@ func TestTree(t *testing.T) {
 				{1.11, 0.0, 0.0},
 				{1.111, 0.0, 0.0},
 			}
-			insertPoints(points, tree)
+			_, _ = insertPoints(points, tree)
 
-			tree.Remove(&points[2])
+			_ = tree.Remove(&points[2])
 
 			nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-1, nodeCount; expected != actual {
@@ -204,7 +204,7 @@ func TestTree(t *testing.T) {
 			results, _ = tree.FindNearest(&points[3], 1, 0)
 			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
 
-			tree.Remove(&points[1])
+			_ = tree.Remove(&points[1])
 
 			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-2, nodeCount; expected != actual {
@@ -219,7 +219,7 @@ func TestTree(t *testing.T) {
 			results, _ = tree.FindNearest(&points[3], 1, 0)
 			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
 
-			tree.Remove(&points[0])
+			_ = tree.Remove(&points[0])
 
 			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-3, nodeCount; expected != actual {
@@ -234,7 +234,7 @@ func TestTree(t *testing.T) {
 			results, _ = tree.FindNearest(&points[3], 1, 0)
 			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
 
-			tree.Remove(&points[3])
+			_ = tree.Remove(&points[3])
 
 			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-4, nodeCount; expected != actual {
@@ -254,7 +254,7 @@ func TestTree(t *testing.T) {
 				{16.0, 0.0, 0.0},
 				{15.0, 0.0, 6.0},
 			}
-			insertPoints(points, tree)
+			_, _ = insertPoints(points, tree)
 
 			root, rootLevel, _ := tree.loadRoot()
 
@@ -265,7 +265,7 @@ func TestTree(t *testing.T) {
 				t.Errorf("Expected root to be at level %d but was %d", expected, actual)
 			}
 
-			tree.Remove(&points[1])
+			_ = tree.Remove(&points[1])
 			root, rootLevel, _ = tree.loadRoot()
 
 			nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
@@ -301,7 +301,7 @@ func TestTree(t *testing.T) {
 				{15.0, 0.0, 6.0},
 				{1.0, 0.0, 0.0},
 			}
-			insertPoints(points, tree)
+			_, _ = insertPoints(points, tree)
 
 			store.savedCount = 0
 			store.expectSavedTree(t, 0, &points[0], 4)
@@ -346,7 +346,7 @@ func TestTree(t *testing.T) {
 			tree := NewInMemoryTree(distanceBetweenPoints)
 
 			points := randomPoints(100)
-			insertPoints(points, tree)
+			_, _ = insertPoints(points, tree)
 
 			var pointsToRemove []interface{}
 			for i := range points {
@@ -357,8 +357,7 @@ func TestTree(t *testing.T) {
 			})
 
 			for i, p := range pointsToRemove {
-				//fmt.Printf("Removing (%d) %v\n", i, p)
-				tree.Remove(p)
+				_ = tree.Remove(p)
 
 				nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
 				if expected, actual := len(points)-i-1, nodeCount; expected != actual {

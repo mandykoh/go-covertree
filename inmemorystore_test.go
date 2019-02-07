@@ -23,7 +23,7 @@ func TestInMemoryStore(t *testing.T) {
 			parent := &dummyItem{"parent", 456.0}
 
 			s := newInMemoryStore(nil)
-			s.AddItem(item, parent, 5)
+			_ = s.AddItem(item, parent, 5)
 
 			levels, ok := s.items[parent]
 			if !ok {
@@ -108,7 +108,7 @@ func TestInMemoryStore(t *testing.T) {
 
 		t.Run("removes an existing child", func(t *testing.T) {
 			s := setup()
-			s.RemoveItem(item2, parent, 7)
+			_ = s.RemoveItem(item2, parent, 7)
 
 			items := s.levelsFor(parent)[7]
 
@@ -130,7 +130,7 @@ func TestInMemoryStore(t *testing.T) {
 			item := &dummyItem{"child", 123.0}
 
 			s := newInMemoryStore(nil)
-			s.UpdateItem(item, nil, 5)
+			_ = s.UpdateItem(item, nil, 5)
 
 			levels, ok := s.items[nil]
 			if !ok {
@@ -143,7 +143,7 @@ func TestInMemoryStore(t *testing.T) {
 				t.Errorf("Expected item %f but found %f", expected.value, actual.value)
 			}
 
-			s.UpdateItem(item, nil, 7)
+			_ = s.UpdateItem(item, nil, 7)
 
 			levels, ok = s.items[nil]
 			if !ok {
@@ -165,7 +165,7 @@ func TestInMemoryStore(t *testing.T) {
 			parent := &dummyItem{"parent", 456.0}
 
 			s := newInMemoryStore(nil)
-			s.UpdateItem(item, parent, 5)
+			_ = s.UpdateItem(item, parent, 5)
 
 			levels, ok := s.items[parent]
 			if !ok {
