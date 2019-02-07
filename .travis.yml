@@ -3,6 +3,5 @@ language: go
 go:
   - 1.x
 install:
-  - go get github.com/redbubble/go-passe
-  - go install github.com/redbubble/go-passe
-script: go test -v -json -cover ./... | go-passe
+  - GO111MODULE=off go get gotest.tools/gotestsum
+script: gotestsum
