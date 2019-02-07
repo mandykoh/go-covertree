@@ -30,7 +30,7 @@ type Point struct {
 Define a [`DistanceFunc`](https://godoc.org/github.com/mandykoh/go-covertree#DistanceFunc) to compute the distance between two instances of the type:
 
 ```go
-func distanceBetween(a, b Item) float64 {
+func distanceBetween(a, b interface{}) float64 {
     p1 := a.(*Point)
     p2 := b.(*Point)
 	
@@ -50,7 +50,8 @@ tree := covertree.NewInMemoryTree(distanceBetween)
 Custom [`Store`](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations can also use the basic Tree constructor to create trees:
 
 ```go
-tree, err := covertree.NewTreeWithStore(pointStore, distanceBetween)       // Creates a tree that is backed by a specific store
+// Creates a tree that is backed by a specific store
+tree, err := covertree.NewTreeWithStore(pointStore, distanceBetween)       
 ```
 
 [Insert](https://godoc.org/github.com/mandykoh/go-covertree#Tree.Insert) some things into the tree:

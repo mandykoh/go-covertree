@@ -12,7 +12,7 @@ type dummyItem struct {
 
 func TestInMemoryStore(t *testing.T) {
 
-	distanceBetween := func(a, b Item) float64 {
+	distanceBetween := func(a, b interface{}) float64 {
 		return math.Abs(a.(*dummyItem).value - b.(*dummyItem).value)
 	}
 
@@ -44,7 +44,7 @@ func TestInMemoryStore(t *testing.T) {
 		item2 := &dummyItem{"thing2", 234.0}
 
 		s := inMemoryStore{
-			items: map[Item]map[int][]Item{
+			items: map[interface{}]map[int][]interface{}{
 				parent: {
 					7: {item1, item2},
 				},
@@ -97,7 +97,7 @@ func TestInMemoryStore(t *testing.T) {
 		setup := func() inMemoryStore {
 			return inMemoryStore{
 				distanceBetween: distanceBetween,
-				items: map[Item]map[int][]Item{
+				items: map[interface{}]map[int][]interface{}{
 					parent: {
 						7: {item1, item2},
 					},

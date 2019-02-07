@@ -348,7 +348,7 @@ func TestTree(t *testing.T) {
 			points := randomPoints(100)
 			insertPoints(points, tree)
 
-			var pointsToRemove []Item
+			var pointsToRemove []interface{}
 			for i := range points {
 				pointsToRemove = append(pointsToRemove, &points[i])
 			}
@@ -462,7 +462,7 @@ func TestTree(t *testing.T) {
 	})
 }
 
-func distanceBetweenPoints(a, b Item) float64 {
+func distanceBetweenPoints(a, b interface{}) float64 {
 	p1 := a.(*Point)
 	p2 := b.(*Point)
 
@@ -476,7 +476,7 @@ func distanceBetweenPoints(a, b Item) float64 {
 }
 
 func distanceBetweenPointsWithCounter(counter *int) DistanceFunc {
-	return func(a, b Item) float64 {
+	return func(a, b interface{}) float64 {
 		*counter++
 		return distanceBetweenPoints(a, b)
 	}
@@ -588,7 +588,7 @@ func randomPoints(count int) (points []Point) {
 	return
 }
 
-func traverseNodes(item, parent Item, level int, indentLevel int, store *inMemoryStore, print bool) (nodeCount int) {
+func traverseNodes(item, parent interface{}, level int, indentLevel int, store *inMemoryStore, print bool) (nodeCount int) {
 	if print {
 		fmt.Printf("%4d: ", level)
 		for i := 0; i < indentLevel; i++ {
@@ -643,7 +643,7 @@ func traverseTree(tree *Tree, store *inMemoryStore, print bool) (nodeCount int) 
 type testStore struct {
 	inMemoryStore
 	savedCount     int
-	savedRoot      Item
+	savedRoot      interface{}
 	savedRootLevel int
 }
 
@@ -651,7 +651,7 @@ func newTestStore(distanceFunc DistanceFunc) *testStore {
 	return &testStore{inMemoryStore: *newInMemoryStore(distanceFunc)}
 }
 
-func (ts *testStore) AddItem(item, parent Item, level int) error {
+func (ts *testStore) AddItem(item, parent interface{}, level int) error {
 	if parent == nil {
 		ts.savedCount++
 		ts.savedRoot = item
@@ -660,7 +660,7 @@ func (ts *testStore) AddItem(item, parent Item, level int) error {
 	return ts.inMemoryStore.AddItem(item, parent, level)
 }
 
-func (ts *testStore) UpdateItem(item, parent Item, level int) error {
+func (ts *testStore) UpdateItem(item, parent interface{}, level int) error {
 	if parent == nil {
 		ts.savedCount++
 		ts.savedRoot = item
@@ -669,7 +669,7 @@ func (ts *testStore) UpdateItem(item, parent Item, level int) error {
 	return ts.inMemoryStore.UpdateItem(item, parent, level)
 }
 
-func (ts *testStore) expectSavedTree(t *testing.T, saveCount int, root Item, rootLevel int) {
+func (ts *testStore) expectSavedTree(t *testing.T, saveCount int, root interface{}, rootLevel int) {
 	t.Helper()
 
 	if expected, actual := saveCount, ts.savedCount; expected != actual {

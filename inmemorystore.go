@@ -2,21 +2,21 @@ package covertree
 
 type inMemoryStore struct {
 	distanceBetween DistanceFunc
-	items           map[Item]map[int][]Item
+	items           map[interface{}]map[int][]interface{}
 }
 
 func newInMemoryStore(distanceFunc DistanceFunc) *inMemoryStore {
 	return &inMemoryStore{
 		distanceBetween: distanceFunc,
-		items:           make(map[Item]map[int][]Item),
+		items:           make(map[interface{}]map[int][]interface{}),
 	}
 }
 
-func (s *inMemoryStore) AddItem(item, parent Item, level int) error {
+func (s *inMemoryStore) AddItem(item, parent interface{}, level int) error {
 	return s.UpdateItem(item, parent, level)
 }
 
-func (s *inMemoryStore) LoadChildren(parent Item) (result LevelsWithItems, err error) {
+func (s *inMemoryStore) LoadChildren(parent interface{}) (result LevelsWithItems, err error) {
 	for level, items := range s.items[parent] {
 		result.Set(level, items)
 	}
@@ -24,7 +24,7 @@ func (s *inMemoryStore) LoadChildren(parent Item) (result LevelsWithItems, err e
 	return
 }
 
-func (s *inMemoryStore) RemoveItem(item, parent Item, level int) error {
+func (s *inMemoryStore) RemoveItem(item, parent interface{}, level int) error {
 	levels := s.items[parent]
 	for i, levelItem := range levels[level] {
 		if levelItem == item {
@@ -37,7 +37,7 @@ func (s *inMemoryStore) RemoveItem(item, parent Item, level int) error {
 	return nil
 }
 
-func (s *inMemoryStore) UpdateItem(item, parent Item, level int) error {
+func (s *inMemoryStore) UpdateItem(item, parent interface{}, level int) error {
 	if parent == nil {
 		delete(s.items, parent)
 	}
@@ -47,10 +47,10 @@ func (s *inMemoryStore) UpdateItem(item, parent Item, level int) error {
 	return nil
 }
 
-func (s *inMemoryStore) levelsFor(item Item) map[int][]Item {
+func (s *inMemoryStore) levelsFor(item interface{}) map[int][]interface{} {
 	levels, ok := s.items[item]
 	if !ok {
-		levels = make(map[int][]Item)
+		levels = make(map[int][]interface{})
 		s.items[item] = levels
 	}
 

@@ -2,7 +2,7 @@ package covertree
 
 type coverSet []itemWithChildren
 
-func coverSetWithItem(item, parent Item, distance float64, store Store) (coverSet, error) {
+func coverSetWithItem(item, parent interface{}, distance float64, store Store) (coverSet, error) {
 	iwc, err := itemWithChildrenFromStore(item, parent, distance, store)
 	if err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func (cs coverSet) atBottom() bool {
 	return true
 }
 
-func (cs coverSet) child(query Item, distThreshold float64, childLevel int, distanceBetween DistanceFunc, store Store) (child coverSet, err error) {
+func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, store Store) (child coverSet, err error) {
 	for _, csItem := range cs {
 		if csItem.withDistance.Distance <= distThreshold {
 			child = append(child, csItem)

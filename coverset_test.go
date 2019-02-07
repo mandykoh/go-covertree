@@ -44,11 +44,11 @@ func TestCoverSet(t *testing.T) {
 
 		t.Run("promotes covering children at the requested level and excludes non-covering children", func(t *testing.T) {
 			cs := coverSet{
-				{withDistance: ItemWithDistance{"a", 0.0}, children: LevelsWithItems{items: map[int][]Item{3: {"c", "d"}}}},
+				{withDistance: ItemWithDistance{"a", 0.0}, children: LevelsWithItems{items: map[int][]interface{}{3: {"c", "d"}}}},
 				{withDistance: ItemWithDistance{"b", 10.0}},
 			}
 
-			mockDistFunc := func(a, b Item) float64 {
+			mockDistFunc := func(a, b interface{}) float64 {
 				if a == "c" || b == "c" {
 					return 5.0
 				}

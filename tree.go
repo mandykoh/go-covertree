@@ -27,12 +27,12 @@ func NewTreeWithStore(store Store, distanceFunc DistanceFunc) (*Tree, error) {
 // FindNearest returns the nearest items in the tree to the specified query
 // item, up to the specified maximum number of results and maximum distance.
 //
-// Results are returned with their distances from the query Item, in order from
+// Results are returned with their distances from the query item, in order from
 // closest to furthest.
 //
 // If no items are found matching the given criteria, an empty result set is
 // returned.
-func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
+func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
 	root, rootLevel, err := t.loadRoot()
 
 	if root == nil {
@@ -74,7 +74,7 @@ func (t *Tree) FindNearest(query Item, maxResults int, maxDistance float64) (res
 // If an item already exists in the tree which is the same as the item being
 // inserted, the item in the tree is returned. Otherwise, the newly inserted
 // item is returned instead.
-func (t *Tree) Insert(item Item) (inserted Item, err error) {
+func (t *Tree) Insert(item interface{}) (inserted interface{}, err error) {
 	root, rootLevel, err := t.loadRoot()
 
 	// Tree is empty - add item as the new root at infinity
@@ -120,7 +120,7 @@ func (t *Tree) Insert(item Item) (inserted Item, err error) {
 
 // Remove removes the given item from the tree. If no such item exists in the
 // tree, this has no effect.
-func (t *Tree) Remove(item Item) (err error) {
+func (t *Tree) Remove(item interface{}) (err error) {
 	root, rootLevel, err := t.loadRoot()
 
 	rootDist := t.distanceBetween(item, root)
@@ -153,7 +153,7 @@ func (t *Tree) Remove(item Item) (err error) {
 		err = t.store.UpdateItem(root, nil, rootLevel)
 
 	} else {
-		var orphans []Item
+		var orphans []interface{}
 		orphans, err = t.remove(item, cs, rootLevel)
 
 		if err == nil {
@@ -175,7 +175,7 @@ func (t *Tree) Remove(item Item) (err error) {
 	return
 }
 
-func (t *Tree) adoptOrphans(orphans []Item, query Item, parents coverSet, distThreshold float64, childLevel int) ([]Item, error) {
+func (t *Tree) adoptOrphans(orphans []interface{}, query interface{}, parents coverSet, distThreshold float64, childLevel int) ([]interface{}, error) {
 	remaining := 0
 
 nextOrphan:
@@ -199,7 +199,7 @@ nextOrphan:
 	return orphans[:remaining], nil
 }
 
-func (t *Tree) hoistRootForChild(child Item, minChildLevel int, root Item, rootLevel int) (newRootLevel int, err error) {
+func (t *Tree) hoistRootForChild(child interface{}, minChildLevel int, root interface{}, rootLevel int) (newRootLevel int, err error) {
 	dist := t.distanceBetween(root, child)
 	childLevel := levelForDistance(dist)
 	newRootLevel = rootLevel
@@ -215,7 +215,7 @@ func (t *Tree) hoistRootForChild(child Item, minChildLevel int, root Item, rootL
 	return
 }
 
-func (t *Tree) insert(item Item, coverSet coverSet, level int) (inserted Item, err error) {
+func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted interface{}, err error) {
 	distThreshold := distanceForLevel(level)
 
 	childCoverSet, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
@@ -248,7 +248,7 @@ func (t *Tree) insert(item Item, coverSet coverSet, level int) (inserted Item, e
 	return nil, nil
 }
 
-func (t *Tree) loadRoot() (root Item, rootLevel int, err error) {
+func (t *Tree) loadRoot() (root interface{}, rootLevel int, err error) {
 	rootLevels, err := t.store.LoadChildren(nil)
 	if err != nil {
 		return
@@ -263,7 +263,7 @@ func (t *Tree) loadRoot() (root Item, rootLevel int, err error) {
 	return
 }
 
-func (t *Tree) remove(item Item, coverSet coverSet, level int) (orphans []Item, err error) {
+func (t *Tree) remove(item interface{}, coverSet coverSet, level int) (orphans []interface{}, err error) {
 	distThreshold := distanceForLevel(level)
 
 	childCoverSet, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
