@@ -9,6 +9,37 @@ import (
 	"time"
 )
 
+func BenchmarkTree(b *testing.B) {
+
+	b.Run("Insert()", func(b *testing.B) {
+		insertPoints := func(n int) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+
+			for i := 0; i < n; i++ {
+				_, _ = tree.Insert(&Point{rand.Float64(), rand.Float64(), rand.Float64()})
+			}
+		}
+
+		b.Run("100 points", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				insertPoints(100)
+			}
+		})
+
+		b.Run("1000 points", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				insertPoints(1000)
+			}
+		})
+
+		b.Run("10000 points", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				insertPoints(10000)
+			}
+		})
+	})
+}
+
 func TestTree(t *testing.T) {
 
 	seed := time.Now().UnixNano()
