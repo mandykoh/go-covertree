@@ -12,11 +12,13 @@ import (
 func BenchmarkTree(b *testing.B) {
 
 	b.Run("Insert()", func(b *testing.B) {
+		rng := rand.New(rand.NewSource(123))
+
 		insertPoints := func(n int) {
 			tree := NewInMemoryTree(distanceBetweenPoints)
 
 			for i := 0; i < n; i++ {
-				_, _ = tree.Insert(&Point{rand.Float64(), rand.Float64(), rand.Float64()})
+				_, _ = tree.Insert(&Point{rng.Float64(), rng.Float64(), rng.Float64()})
 			}
 		}
 
