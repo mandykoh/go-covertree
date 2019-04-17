@@ -20,23 +20,20 @@ func BenchmarkTree(b *testing.B) {
 			}
 		}
 
-		b.Run("100 points", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				insertPoints(100)
-			}
-		})
+		cases := []int{
+			100,
+			1000,
+			10000,
+		}
 
-		b.Run("1000 points", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				insertPoints(1000)
-			}
-		})
+		for _, pointCount := range cases {
 
-		b.Run("10000 points", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				insertPoints(10000)
-			}
-		})
+			b.Run(fmt.Sprintf("%d points", pointCount), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					insertPoints(pointCount)
+				}
+			})
+		}
 	})
 }
 
