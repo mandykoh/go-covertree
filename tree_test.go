@@ -14,25 +14,31 @@ func BenchmarkTree(b *testing.B) {
 	b.Run("Insert()", func(b *testing.B) {
 		rng := rand.New(rand.NewSource(123))
 
-		insertPoints := func(n int) {
+		insertPoints := func(points []Point) {
 			tree := NewInMemoryTree(distanceBetweenPoints)
-
-			for i := 0; i < n; i++ {
-				_, _ = tree.Insert(&Point{rng.Float64(), rng.Float64(), rng.Float64()})
+			for i := range points {
+				_, _ = tree.Insert(&points[i])
 			}
 		}
 
-		cases := []int{
-			100,
-			1000,
-			10000,
+		makePoints := func(n int) []Point {
+			points := make([]Point, n)
+			for i := 0; i < n; i++ {
+				points[i] = Point{rng.Float64(), rng.Float64(), rng.Float64()}
+			}
+			return points
 		}
 
-		for _, pointCount := range cases {
+		cases := [][]Point{
+			makePoints(100),
+			makePoints(1000),
+			makePoints(10000),
+		}
 
-			b.Run(fmt.Sprintf("%d points", pointCount), func(b *testing.B) {
+		for _, points := range cases {
+			b.Run(fmt.Sprintf("%d points", len(points)), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					insertPoints(pointCount)
+					insertPoints(points)
 				}
 			})
 		}
