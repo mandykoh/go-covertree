@@ -59,7 +59,7 @@ func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float6
 			distThreshold += maxDistance
 		}
 
-		cs, err = cs.child(query, distThreshold, level-1, t.distanceBetween, t.store)
+		cs, _, err = cs.child(query, distThreshold, level-1, t.distanceBetween, t.store)
 		if err != nil {
 			return
 		}
@@ -218,7 +218,7 @@ func (t *Tree) hoistRootForChild(child interface{}, minChildLevel int, root inte
 func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted interface{}, err error) {
 	distThreshold := distanceForLevel(level)
 
-	childCoverSet, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
+	childCoverSet, firstWithinThreshold, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
 	if err != nil {
 		return nil, err
 	}
@@ -236,12 +236,10 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted 
 			return
 		}
 
-		// No parent was found among the children - look for a suitable parent at this level
-		for _, csItem := range coverSet {
-			if csItem.withDistance.Distance <= distThreshold {
-				err := t.store.AddItem(item, csItem.withDistance.Item, level-1)
-				return item, err
-			}
+		// No parent was found among the children - pick first suitable parent at this level
+		if firstWithinThreshold.withDistance.Item != nil {
+			err := t.store.AddItem(item, firstWithinThreshold.withDistance.Item, level-1)
+			return item, err
 		}
 	}
 
@@ -266,7 +264,7 @@ func (t *Tree) loadRoot() (root interface{}, rootLevel int, err error) {
 func (t *Tree) remove(item interface{}, coverSet coverSet, level int) (orphans []interface{}, err error) {
 	distThreshold := distanceForLevel(level)
 
-	childCoverSet, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
+	childCoverSet, _, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
 
 	if err == nil && len(childCoverSet) > 0 {
 		found := false

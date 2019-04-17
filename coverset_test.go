@@ -34,7 +34,7 @@ func TestCoverSet(t *testing.T) {
 				{withDistance: ItemWithDistance{"c", 1.0}},
 			}
 
-			child, _ := cs.child("a", 2.0, 0, nil, nil)
+			child, _, _ := cs.child("a", 2.0, 0, nil, nil)
 
 			expectResults(t, child, coverSet{
 				{withDistance: ItemWithDistance{"a", 0.0}},
@@ -56,7 +56,7 @@ func TestCoverSet(t *testing.T) {
 				return 6.0
 			}
 
-			child, _ := cs.child("a", 5.0, 3, mockDistFunc, newInMemoryStore(nil))
+			child, _, _ := cs.child("a", 5.0, 3, mockDistFunc, newInMemoryStore(nil))
 
 			expectResults(t, child, coverSet{
 				{withDistance: ItemWithDistance{"a", 0.0}},
