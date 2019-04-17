@@ -21,6 +21,8 @@ func (cs coverSet) atBottom() bool {
 }
 
 func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, store Store) (child coverSet, firstWithinThreshold itemWithChildren, err error) {
+	child = make(coverSet, 0, len(cs))
+
 	for _, csItem := range cs {
 		if csItem.withDistance.Distance <= distThreshold {
 			child = append(child, csItem)
