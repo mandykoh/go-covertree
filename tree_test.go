@@ -14,17 +14,20 @@ func BenchmarkTree(b *testing.B) {
 	b.Run("Insert()", func(b *testing.B) {
 		rng := rand.New(rand.NewSource(123))
 
-		insertPoints := func(points []Point) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
+		insertPoints := func(points []Point, tree *Tree) {
 			for i := range points {
 				_, _ = tree.Insert(&points[i])
 			}
 		}
 
+		makePoint := func() Point {
+			return Point{rng.Float64(), rng.Float64(), rng.Float64()}
+		}
+
 		makePoints := func(n int) []Point {
 			points := make([]Point, n)
 			for i := 0; i < n; i++ {
-				points[i] = Point{rng.Float64(), rng.Float64(), rng.Float64()}
+				points[i] = makePoint()
 			}
 			return points
 		}
@@ -33,12 +36,24 @@ func BenchmarkTree(b *testing.B) {
 			makePoints(100),
 			makePoints(1000),
 			makePoints(10000),
+			makePoints(100000),
 		}
 
 		for _, points := range cases {
-			b.Run(fmt.Sprintf("%d points", len(points)), func(b *testing.B) {
+			tree := NewInMemoryTree(distanceBetweenPoints)
+			insertPoints(points, tree)
+
+			b.Run(fmt.Sprintf("with tree of size %d", len(points)), func(b *testing.B) {
+				b.StopTimer()
+
 				for i := 0; i < b.N; i++ {
-					insertPoints(points)
+					p := makePoint()
+
+					b.StartTimer()
+					_, _ = tree.Insert(&p)
+					b.StopTimer()
+
+					_ = tree.Remove(&p)
 				}
 			})
 		}
