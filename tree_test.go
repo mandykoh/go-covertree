@@ -25,7 +25,7 @@ func BenchmarkTree(b *testing.B) {
 
 			b.Run(fmt.Sprintf("with tree of size %d", pointCount), func(b *testing.B) {
 				b.StopTimer()
-				tree := NewInMemoryTree(distanceBetweenPoints)
+				tree := NewInMemoryTree(2, distanceBetweenPoints)
 				_, _ = insertPoints(randomPoints(pointCount), tree)
 
 				for i := 0; i < b.N; i++ {
@@ -51,7 +51,7 @@ func TestTree(t *testing.T) {
 	t.Run("FindNearest()", func(t *testing.T) {
 
 		t.Run("returns no results for empty tree", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
 
 			query := randomPoint()
 			results, err := tree.FindNearest(&query, math.MaxInt32, math.MaxFloat64)
@@ -65,7 +65,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("returns the only result for tree with a single root node", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
 			p := randomPoint()
 			_, _ = tree.Insert(&p)
 
@@ -79,7 +79,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("with a populated tree", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
 
 			points := []Point{
 				{1.0, 0.0, 0.0},
@@ -133,7 +133,7 @@ func TestTree(t *testing.T) {
 	t.Run("Insert()", func(t *testing.T) {
 
 		t.Run("returns the original item when inserting a duplicate", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
 			store := tree.store.(*inMemoryStore)
 
 			p1 := randomPoint()
@@ -160,7 +160,7 @@ func TestTree(t *testing.T) {
 
 		t.Run("saves the tree root state when it changes", func(t *testing.T) {
 			store := newTestStore(distanceBetweenPoints)
-			tree, _ := NewTreeWithStore(store, distanceBetweenPoints)
+			tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
 
 			// First point should become the initial root at infinity
 			p1 := &Point{1.0, 0.0, 0.0}
@@ -212,7 +212,7 @@ func TestTree(t *testing.T) {
 	t.Run("Remove()", func(t *testing.T) {
 
 		t.Run("removes item from the tree while preserving its children", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
 
 			points := []Point{
 				{1.0, 0.0, 0.0},
@@ -280,7 +280,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("correctly re-parents orphans that are no longer covered by the root", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
 
 			points := []Point{
 				{0.0, 0.0, 0.0},
@@ -326,7 +326,7 @@ func TestTree(t *testing.T) {
 
 		t.Run("saves the tree root state when it changes", func(t *testing.T) {
 			store := newTestStore(distanceBetweenPoints)
-			tree, _ := NewTreeWithStore(store, distanceBetweenPoints)
+			tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
 
 			points := []Point{
 				{0.0, 0.0, 0.0},
@@ -376,7 +376,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("allows all remaining nodes to be findable after removal", func(t *testing.T) {
-			tree := NewInMemoryTree(distanceBetweenPoints)
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
 
 			points := randomPoints(100)
 			_, _ = insertPoints(points, tree)
@@ -413,7 +413,7 @@ func TestTree(t *testing.T) {
 	t.Run("with randomly populated tree", func(t *testing.T) {
 		distanceCalls := 0
 		store := newInMemoryStore(distanceBetweenPoints)
-		tree, _ := NewTreeWithStore(store, distanceBetweenPointsWithCounter(&distanceCalls))
+		tree, _ := NewTreeWithStore(store, 2, distanceBetweenPointsWithCounter(&distanceCalls))
 
 		points := randomPoints(1000)
 

@@ -65,7 +65,7 @@ func (s *inMemoryStore) levelsFor(item interface{}) map[int][]interface{} {
 // tend to be used, the in-memory implementation uses pointer equality instead
 // of distance-identity. In particular, this means that removal requires the
 // exact item to be specified in order to be removed.
-func NewInMemoryTree(distanceFunc DistanceFunc) *Tree {
-	tree, _ := NewTreeWithStore(newInMemoryStore(distanceFunc), distanceFunc)
+func NewInMemoryTree(basis float64, distanceFunc DistanceFunc) *Tree {
+	tree, _ := NewTreeWithStore(newInMemoryStore(distanceFunc), basis, distanceFunc)
 	return tree
 }
