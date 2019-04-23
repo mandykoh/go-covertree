@@ -227,7 +227,7 @@ func (t *Tree) hoistRootForChild(child interface{}, minChildLevel int, root inte
 func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted interface{}, err error) {
 	distThreshold := t.distanceForLevel(level)
 
-	childCoverSet, firstWithinThreshold, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
+	childCoverSet, parentWithinThreshold, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
 	if err != nil {
 		return nil, err
 	}
@@ -245,9 +245,9 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted 
 			return
 		}
 
-		// No parent was found among the children - pick first suitable parent at this level
-		if firstWithinThreshold.withDistance.Item != nil {
-			err := t.store.AddItem(item, firstWithinThreshold.withDistance.Item, level-1)
+		// No parent was found among the children - pick arbitrary suitable parent at this level
+		if parentWithinThreshold != nil {
+			err := t.store.AddItem(item, parentWithinThreshold, level-1)
 			return item, err
 		}
 	}
