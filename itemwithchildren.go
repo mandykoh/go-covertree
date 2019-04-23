@@ -19,6 +19,6 @@ func (iwc *itemWithChildren) hasChildren() bool {
 	return len(iwc.children.items) > 0
 }
 
-func (iwc *itemWithChildren) removeChildrenAt(level int) []interface{} {
-	return iwc.children.removeItemsAt(level)
+func (iwc *itemWithChildren) takeChildrenAt(level int) []interface{} {
+	return iwc.children.takeItemsAt(level)
 }

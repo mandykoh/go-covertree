@@ -228,28 +228,25 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted 
 	distThreshold := t.distanceForLevel(level)
 
 	childCoverSet, parentWithinThreshold, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
-	if err != nil {
+	if err != nil || len(childCoverSet) == 0 {
 		return nil, err
 	}
 
-	if len(childCoverSet) > 0 {
+	// Only one matching child which is at zero distance - item is a duplicate so return the original
+	if childCoverSet[0].withDistance.Distance == 0 {
+		return childCoverSet[0].withDistance.Item, nil
+	}
 
-		// Only one matching child which is at zero distance - item is a duplicate so return the original
-		if childCoverSet[0].withDistance.Distance == 0 {
-			return childCoverSet[0].withDistance.Item, nil
-		}
+	// Look for a suitable parent amongst the children
+	inserted, err = t.insert(item, childCoverSet, level-1)
+	if inserted != nil || err != nil {
+		return
+	}
 
-		// Look for a suitable parent amongst the children
-		inserted, err = t.insert(item, childCoverSet, level-1)
-		if inserted != nil || err != nil {
-			return
-		}
-
-		// No parent was found among the children - pick arbitrary suitable parent at this level
-		if parentWithinThreshold != nil {
-			err := t.store.AddItem(item, parentWithinThreshold, level-1)
-			return item, err
-		}
+	// No parent was found among the children - pick arbitrary suitable parent at this level
+	if parentWithinThreshold != nil {
+		err := t.store.AddItem(item, parentWithinThreshold, level-1)
+		return item, err
 	}
 
 	return nil, nil

@@ -20,24 +20,23 @@ func (cs coverSet) atBottom() bool {
 	return true
 }
 
-func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, store Store) (child coverSet, parentWithinThreshold interface{}, err error) {
-	child = make(coverSet, 0, len(cs))
+func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, store Store) (childCoverSet coverSet, parentWithinThreshold interface{}, err error) {
+	childCoverSet = make(coverSet, 0, len(cs))
 
 	for _, csItem := range cs {
 		if csItem.withDistance.Distance <= distThreshold {
-			child = append(child, csItem)
+			childCoverSet = append(childCoverSet, csItem)
 			parentWithinThreshold = csItem.withDistance.Item
 		}
 
-		for _, childItem := range csItem.removeChildrenAt(childLevel) {
-			childDist := distanceBetween(childItem, query)
-			if childDist <= distThreshold {
+		for _, childItem := range csItem.takeChildrenAt(childLevel) {
+			if childDist := distanceBetween(childItem, query); childDist <= distThreshold {
 				promotedChild, err := itemWithChildrenFromStore(childItem, csItem.withDistance.Item, childDist, store)
 				if err != nil {
-					return nil, parentWithinThreshold, err
+					return nil, nil, err
 				}
 
-				child = append(child, promotedChild)
+				childCoverSet = append(childCoverSet, promotedChild)
 			}
 		}
 	}

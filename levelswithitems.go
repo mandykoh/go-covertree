@@ -28,7 +28,7 @@ func (lwi *LevelsWithItems) itemsAt(level int) []interface{} {
 	return lwi.items[level]
 }
 
-func (lwi *LevelsWithItems) removeItemsAt(level int) []interface{} {
+func (lwi *LevelsWithItems) takeItemsAt(level int) []interface{} {
 	items := lwi.items[level]
 	delete(lwi.items, level)
 	return items
