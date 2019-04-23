@@ -50,7 +50,7 @@ func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float6
 	}
 
 	for level := rootLevel; !cs.atBottom(); level-- {
-		distThreshold := distanceForLevel(level, t.basis)
+		distThreshold := t.distanceForLevel(level)
 
 		closest := cs.closest(maxResults, maxDistance)
 		if len(closest) > 0 {
@@ -98,7 +98,7 @@ func (t *Tree) Insert(item interface{}) (inserted interface{}, err error) {
 
 	// Tree only has a root at infinity - move root to appropriate level for the new item
 	if rootLevel == math.MaxInt32 {
-		rootLevel = levelForDistance(cs[0].withDistance.Distance, t.basis)
+		rootLevel = t.levelForDistance(cs[0].withDistance.Distance)
 		err = t.store.UpdateItem(root, nil, rootLevel)
 		if err != nil {
 			return
@@ -204,9 +204,13 @@ nextOrphan:
 	return orphans[:remaining], nil
 }
 
+func (t *Tree) distanceForLevel(level int) float64 {
+	return math.Pow(t.basis, float64(level))
+}
+
 func (t *Tree) hoistRootForChild(child interface{}, minChildLevel int, root interface{}, rootLevel int) (newRootLevel int, err error) {
 	dist := t.distanceBetween(root, child)
-	childLevel := levelForDistance(dist, t.basis)
+	childLevel := t.levelForDistance(dist)
 	newRootLevel = rootLevel
 
 	if childLevel < minChildLevel {
@@ -221,7 +225,7 @@ func (t *Tree) hoistRootForChild(child interface{}, minChildLevel int, root inte
 }
 
 func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted interface{}, err error) {
-	distThreshold := distanceForLevel(level, t.basis)
+	distThreshold := t.distanceForLevel(level)
 
 	childCoverSet, firstWithinThreshold, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
 	if err != nil {
@@ -251,6 +255,10 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted 
 	return nil, nil
 }
 
+func (t *Tree) levelForDistance(distance float64) int {
+	return int(math.Ceil(math.Log2(distance) / math.Log2(t.basis)))
+}
+
 func (t *Tree) loadRoot() (root interface{}, rootLevel int, err error) {
 	rootLevels, err := t.store.LoadChildren(nil)
 	if err != nil {
@@ -267,7 +275,7 @@ func (t *Tree) loadRoot() (root interface{}, rootLevel int, err error) {
 }
 
 func (t *Tree) remove(item interface{}, coverSet coverSet, level int) (orphans []interface{}, err error) {
-	distThreshold := distanceForLevel(level, t.basis)
+	distThreshold := t.distanceForLevel(level)
 
 	childCoverSet, _, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, t.store)
 
@@ -288,7 +296,7 @@ func (t *Tree) remove(item interface{}, coverSet coverSet, level int) (orphans [
 				}
 
 				// Try to get orphans adopted by one of the siblings of the deleted node
-				orphans, err = t.adoptOrphans(orphans, item, childCoverSet, distanceForLevel(level-2, t.basis), level-2)
+				orphans, err = t.adoptOrphans(orphans, item, childCoverSet, t.distanceForLevel(level-2), level-2)
 
 				break
 			}
@@ -305,12 +313,4 @@ func (t *Tree) remove(item interface{}, coverSet coverSet, level int) (orphans [
 	}
 
 	return
-}
-
-func distanceForLevel(level int, basis float64) float64 {
-	return math.Pow(basis, float64(level))
-}
-
-func levelForDistance(distance, basis float64) int {
-	return int(math.Ceil(math.Log2(distance) / math.Log2(basis)))
 }
