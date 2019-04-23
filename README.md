@@ -44,14 +44,16 @@ func distanceBetween(a, b interface{}) float64 {
 Create a [`Tree`](https://godoc.org/github.com/mandykoh/go-covertree#Tree). A tree using a provided in-memory store can be conveniently created using [`NewInMemoryTree`](https://godoc.org/github.com/mandykoh/go-covertree#NewInMemoryTree):
 
 ```go
-tree := covertree.NewInMemoryTree(distanceBetween)
+tree := covertree.NewInMemoryTree(basis, distanceBetween)
 ```
+
+The `basis` specifies the logarithmic base for determining the coverage of nodes at each level of the tree. If unsure, a good starting value is around 2.0.
 
 Custom [`Store`](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations can also use the basic Tree constructor to create trees:
 
 ```go
 // Creates a tree that is backed by a specific store
-tree, err := covertree.NewTreeWithStore(pointStore, distanceBetween)       
+tree, err := covertree.NewTreeWithStore(pointStore, basis, distanceBetween)       
 ```
 
 [Insert](https://godoc.org/github.com/mandykoh/go-covertree#Tree.Insert) some things into the tree:
