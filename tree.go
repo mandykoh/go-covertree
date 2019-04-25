@@ -115,6 +115,7 @@ func (t *Tree) Insert(item interface{}) (inserted interface{}, err error) {
 
 			rootLevel, err = t.hoistRootForChild(item, math.MinInt32, root, rootLevel)
 			if err == nil {
+				inserted = item
 				err = t.store.UpdateItem(root, nil, rootLevel)
 			}
 		}

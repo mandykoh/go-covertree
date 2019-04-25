@@ -164,46 +164,61 @@ func TestTree(t *testing.T) {
 
 			// First point should become the initial root at infinity
 			p1 := &Point{1.0, 0.0, 0.0}
-			_, err := tree.Insert(p1)
+			inserted, err := tree.Insert(p1)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			if inserted != p1 {
+				t.Errorf("Expected inserted point to be %v but got %v", p1, inserted)
 			}
 			store.expectSavedTree(t, 1, p1, math.MaxInt32)
 
 			// Second point should be inserted as a child, establishing the initial levels
 			p2 := &Point{2.0, 0.0, 0.0}
-			_, err = tree.Insert(p2)
+			inserted, err = tree.Insert(p2)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			if inserted != p2 {
+				t.Errorf("Expected inserted point to be %v but got %v", p2, inserted)
 			}
 			store.expectSavedTree(t, 2, p1, 0)
 
 			// Third point is very different and should cause the root to be promoted
 			p3 := &Point{100.0, 0.0, 0.0}
-			_, err = tree.Insert(p3)
+			inserted, err = tree.Insert(p3)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			if inserted != p3 {
+				t.Errorf("Expected inserted point to be %v but got %v", p3, inserted)
 			}
 			store.expectSavedTree(t, 3, p1, 8)
 
 			// Fourth point is a new child and should deepen the tree a little without affecting the root
 			p4 := &Point{1.1, 0.0, 0.0}
-			_, err = tree.Insert(p4)
+			inserted, err = tree.Insert(p4)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			if inserted != p4 {
+				t.Errorf("Expected inserted point to be %v but got %v", p4, inserted)
 			}
 			store.expectSavedTree(t, 3, p1, 8)
 
 			// Fifth point is another new child at the same depth and also should not cause an update
 			p5 := &Point{2.1, 0.0, 0.0}
-			_, err = tree.Insert(p5)
+			inserted, err = tree.Insert(p5)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
+			}
+			if inserted != p5 {
+				t.Errorf("Expected inserted point to be %v but got %v", p5, inserted)
 			}
 			store.expectSavedTree(t, 3, p1, 8)
 		})
