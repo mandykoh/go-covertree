@@ -2,8 +2,8 @@ package covertree
 
 type coverSet []itemWithChildren
 
-func coverSetWithItem(item, parent interface{}, distance float64, store Store) (coverSet, error) {
-	iwc, err := itemWithChildrenFromStore(item, parent, distance, store)
+func coverSetWithItem(item, parent interface{}, distance float64, loadChildren func(interface{}) (LevelsWithItems, error)) (coverSet, error) {
+	iwc, err := itemWithChildrenFromStore(item, parent, distance, loadChildren)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,7 @@ func (cs coverSet) atBottom() bool {
 	return true
 }
 
-func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, store Store) (childCoverSet coverSet, parentWithinThreshold interface{}, err error) {
+func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, loadChildren func(interface{}) (LevelsWithItems, error)) (childCoverSet coverSet, parentWithinThreshold interface{}, err error) {
 	childCoverSet = make(coverSet, 0, len(cs))
 
 	for _, csItem := range cs {
@@ -31,7 +31,7 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 
 		for _, childItem := range csItem.takeChildrenAt(childLevel) {
 			if childDist := distanceBetween(childItem, query); childDist <= distThreshold {
-				promotedChild, err := itemWithChildrenFromStore(childItem, csItem.withDistance.Item, childDist, store)
+				promotedChild, err := itemWithChildrenFromStore(childItem, csItem.withDistance.Item, childDist, loadChildren)
 				if err != nil {
 					return nil, nil, err
 				}

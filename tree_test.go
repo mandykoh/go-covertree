@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 )
@@ -258,6 +259,50 @@ func TestTree(t *testing.T) {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
 			store.expectSavedTree(t, 3, p1, 8)
+		})
+
+		t.Run("is thread-safe with concurrent reads", func(t *testing.T) {
+			store := newTestStore(distanceBetweenPoints)
+			tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
+
+			points := randomPoints(10000)
+
+			const workers = 8
+			var insertQueue = make(chan *Point, workers*2)
+			var doneGroup sync.WaitGroup
+			doneGroup.Add(workers)
+
+			for i := 0; i < workers; i++ {
+				go func() {
+					for p := range insertQueue {
+						_ = tree.Insert(p)
+						_, _ = tree.FindNearest(p, 1, 0.0)
+					}
+					doneGroup.Done()
+				}()
+			}
+
+			for i := range points {
+				insertQueue <- &points[i]
+			}
+			close(insertQueue)
+			doneGroup.Wait()
+
+			for i := range points {
+				p := &points[i]
+
+				results, err := tree.FindNearest(p, 1, 0.0)
+
+				if err != nil {
+					t.Fatalf("Expected success looking up point but got error: %v", err)
+				}
+
+				if len(results) == 0 {
+					t.Errorf("Expected point %v to be findable but wasn’t", p)
+				} else if results[0].Item != p {
+					t.Errorf("Expected point %v to be findable but found %v instead", p, results[0].Item)
+				}
+			}
 		})
 	})
 
