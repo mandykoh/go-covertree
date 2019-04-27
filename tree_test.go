@@ -5,7 +5,6 @@ import (
 	"math"
 	"math/rand"
 	"sort"
-	"sync"
 	"testing"
 	"time"
 )
@@ -33,7 +32,7 @@ func BenchmarkTree(b *testing.B) {
 					p := randomPoint()
 
 					b.StartTimer()
-					_, _ = tree.Insert(&p)
+					_ = tree.Insert(&p)
 					b.StopTimer()
 
 					_ = tree.Remove(&p)
@@ -68,7 +67,7 @@ func TestTree(t *testing.T) {
 		t.Run("returns the only result for tree with a single root node", func(t *testing.T) {
 			tree := NewInMemoryTree(2, distanceBetweenPoints)
 			p := randomPoint()
-			_, _ = tree.Insert(&p)
+			_ = tree.Insert(&p)
 
 			query := randomPoint()
 			results, err := tree.FindNearest(&query, 2, math.MaxFloat64)
@@ -133,29 +132,81 @@ func TestTree(t *testing.T) {
 
 	t.Run("Insert()", func(t *testing.T) {
 
-		t.Run("returns the original item when inserting a duplicate", func(t *testing.T) {
+		t.Run("inserts duplicates of the root as children of the original item at the root", func(t *testing.T) {
 			tree := NewInMemoryTree(2, distanceBetweenPoints)
 			store := tree.store.(*inMemoryStore)
 
 			p1 := randomPoint()
-			inserted, err := tree.Insert(&p1)
+			err := tree.Insert(&p1)
 			if err != nil {
 				t.Fatalf("Error inserting point into tree: %v", err)
 			}
 
 			p2 := p1
-			inserted, err = tree.Insert(&p2)
+			err = tree.Insert(&p2)
 			if err != nil {
 				t.Fatalf("Error inserting point into tree: %v", err)
 			}
 
 			nodeCount := traverseTree(tree, store, false)
 
-			if expected, actual := 1, nodeCount; expected != actual {
-				t.Errorf("Expected only one node in tree after inserting duplicate but found %d", actual)
+			if expected, actual := 2, nodeCount; expected != actual {
+				t.Errorf("Expected %d nodes in tree after inserting duplicate but found %d", expected, actual)
 			}
-			if expected, actual := &p1, inserted; expected != actual {
-				t.Errorf("Expected duplicate insertion to return original point but got a different point instead")
+
+			found, err := tree.FindNearest(&p2, 2, 0.0)
+			if err != nil {
+				t.Fatalf("Expected lookup of duplicates to succeed but got error: %v", err)
+			}
+			if expected, actual := 2, len(found); expected != actual {
+				t.Errorf("Expected %d duplicate items to be findable but found %d instead", expected, actual)
+			} else {
+				if expected, actual := &p1, found[0].Item; expected != actual {
+					t.Errorf("Expected first inserted duplicate to be findable but got %v", actual)
+				}
+				if expected, actual := &p2, found[1].Item; expected != actual {
+					t.Errorf("Expected second inserted duplicate to be findable but got %v", actual)
+				}
+			}
+		})
+
+		t.Run("inserts duplicates as children of the original item", func(t *testing.T) {
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			store := tree.store.(*inMemoryStore)
+
+			_, _ = insertPoints(randomPoints(2), tree)
+
+			p1 := randomPoint()
+			err := tree.Insert(&p1)
+			if err != nil {
+				t.Fatalf("Error inserting point into tree: %v", err)
+			}
+
+			p2 := p1
+			err = tree.Insert(&p2)
+			if err != nil {
+				t.Fatalf("Error inserting point into tree: %v", err)
+			}
+
+			nodeCount := traverseTree(tree, store, true)
+
+			if expected, actual := 4, nodeCount; expected != actual {
+				t.Errorf("Expected %d nodes in tree after inserting duplicate but found %d", expected, actual)
+			}
+
+			found, err := tree.FindNearest(&p2, 2, 0.0)
+			if err != nil {
+				t.Fatalf("Expected lookup of duplicates to succeed but got error: %v", err)
+			}
+			if expected, actual := 2, len(found); expected != actual {
+				t.Errorf("Expected %d duplicate items to be findable but found %d instead", expected, actual)
+			} else {
+				if expected, actual := &p1, found[0].Item; expected != actual {
+					t.Errorf("Expected first inserted duplicate to be findable but got %v", actual)
+				}
+				if expected, actual := &p2, found[1].Item; expected != actual {
+					t.Errorf("Expected second inserted duplicate to be findable but got %v", actual)
+				}
 			}
 		})
 
@@ -165,100 +216,48 @@ func TestTree(t *testing.T) {
 
 			// First point should become the initial root at infinity
 			p1 := &Point{1.0, 0.0, 0.0}
-			inserted, err := tree.Insert(p1)
+			err := tree.Insert(p1)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
-			}
-			if inserted != p1 {
-				t.Errorf("Expected inserted point to be %v but got %v", p1, inserted)
 			}
 			store.expectSavedTree(t, 1, p1, math.MaxInt32)
 
 			// Second point should be inserted as a child, establishing the initial levels
 			p2 := &Point{2.0, 0.0, 0.0}
-			inserted, err = tree.Insert(p2)
+			err = tree.Insert(p2)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
-			}
-			if inserted != p2 {
-				t.Errorf("Expected inserted point to be %v but got %v", p2, inserted)
 			}
 			store.expectSavedTree(t, 2, p1, 0)
 
 			// Third point is very different and should cause the root to be promoted
 			p3 := &Point{100.0, 0.0, 0.0}
-			inserted, err = tree.Insert(p3)
+			err = tree.Insert(p3)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
-			}
-			if inserted != p3 {
-				t.Errorf("Expected inserted point to be %v but got %v", p3, inserted)
 			}
 			store.expectSavedTree(t, 3, p1, 8)
 
 			// Fourth point is a new child and should deepen the tree a little without affecting the root
 			p4 := &Point{1.1, 0.0, 0.0}
-			inserted, err = tree.Insert(p4)
+			err = tree.Insert(p4)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
-			}
-			if inserted != p4 {
-				t.Errorf("Expected inserted point to be %v but got %v", p4, inserted)
 			}
 			store.expectSavedTree(t, 3, p1, 8)
 
 			// Fifth point is another new child at the same depth and also should not cause an update
 			p5 := &Point{2.1, 0.0, 0.0}
-			inserted, err = tree.Insert(p5)
+			err = tree.Insert(p5)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			if inserted != p5 {
-				t.Errorf("Expected inserted point to be %v but got %v", p5, inserted)
-			}
 			store.expectSavedTree(t, 3, p1, 8)
-		})
-
-		t.Run("is thread-safe", func(t *testing.T) {
-			store := newTestStore(distanceBetweenPoints)
-			tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
-
-			points := randomPoints(256)
-
-			var doneGroup sync.WaitGroup
-			doneGroup.Add(len(points))
-
-			for i := range points {
-				p := &points[i]
-
-				go func() {
-					_, _ = tree.Insert(p)
-					doneGroup.Done()
-				}()
-			}
-
-			doneGroup.Wait()
-
-			for i := range points {
-				p := &points[i]
-
-				results, err := tree.FindNearest(p, 1, 0.0)
-
-				if err != nil {
-					t.Fatalf("Expected success looking up point but got error: %v", err)
-				}
-
-				if len(results) == 0 {
-					t.Errorf("Expected point %v to be findable but wasn’t", p)
-				} else if results[0].Item != p {
-					t.Errorf("Expected point %v to be findable but found %v instead", p, results[0].Item)
-				}
-			}
 		})
 	})
 
@@ -421,7 +420,7 @@ func TestTree(t *testing.T) {
 			store.expectSavedTree(t, 3, nil, 6)
 
 			// Re-inserting a node should make it the new root
-			_, err = tree.Insert(&points[1])
+			err = tree.Insert(&points[1])
 			if err != nil {
 				t.Fatalf("Expected insertion to succeed but got error: %v", err)
 			}
@@ -597,7 +596,7 @@ func insertPoints(points []Point, tree *Tree) (timeTaken time.Duration, err erro
 	startTime := time.Now()
 
 	for i := range points {
-		_, err := tree.Insert(&points[i])
+		err := tree.Insert(&points[i])
 		if err != nil {
 			return 0, err
 		}

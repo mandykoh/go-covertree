@@ -73,27 +73,22 @@ func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float6
 	return cs.closest(maxResults, maxDistance), nil
 }
 
-// Insert attempts to insert the specified item into the tree.
-//
-// Two items are defined as being the same if their distance is exactly zero.
-// If an item already exists in the tree which is the same as the item being
-// inserted, the item in the tree is returned. Otherwise, the newly inserted
-// item is returned instead.
-func (t *Tree) Insert(item interface{}) (inserted interface{}, err error) {
+// Insert inserts the specified item into the tree.
+func (t *Tree) Insert(item interface{}) (err error) {
 	root, rootLevel, err := t.loadRoot()
 
 	// Tree is empty - add item as the new root at infinity
 	if root == nil {
 		err := t.store.AddItem(item, nil, math.MaxInt32)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return item, err
+		return err
 	}
 
 	cs, err := coverSetWithItem(root, nil, t.distanceBetween(root, item), t.store)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Tree only has a root at infinity - move root to appropriate level for the new item
@@ -105,7 +100,7 @@ func (t *Tree) Insert(item interface{}) (inserted interface{}, err error) {
 		}
 	}
 
-	inserted, err = t.insert(item, cs, rootLevel)
+	inserted, err := t.insert(item, cs, rootLevel)
 
 	if err == nil {
 		if inserted == nil {
@@ -115,7 +110,6 @@ func (t *Tree) Insert(item interface{}) (inserted interface{}, err error) {
 
 			rootLevel, err = t.hoistRootForChild(item, math.MinInt32, root, rootLevel)
 			if err == nil {
-				inserted = item
 				err = t.store.UpdateItem(root, nil, rootLevel)
 			}
 		}
@@ -233,9 +227,10 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int) (inserted 
 		return nil, err
 	}
 
-	// Only one matching child which is at zero distance - item is a duplicate so return the original
+	// A matching child which is at zero distance - item is a duplicate so insert it as a child
 	if childCoverSet[0].withDistance.Distance == 0 {
-		return childCoverSet[0].withDistance.Item, nil
+		err := t.store.AddItem(item, childCoverSet[0].withDistance.Item, level-2)
+		return item, err
 	}
 
 	// Look for a suitable parent amongst the children
