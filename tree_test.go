@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 )
@@ -221,6 +222,43 @@ func TestTree(t *testing.T) {
 				t.Errorf("Expected inserted point to be %v but got %v", p5, inserted)
 			}
 			store.expectSavedTree(t, 3, p1, 8)
+		})
+
+		t.Run("is thread-safe", func(t *testing.T) {
+			store := newTestStore(distanceBetweenPoints)
+			tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
+
+			points := randomPoints(256)
+
+			var doneGroup sync.WaitGroup
+			doneGroup.Add(len(points))
+
+			for i := range points {
+				p := &points[i]
+
+				go func() {
+					_, _ = tree.Insert(p)
+					doneGroup.Done()
+				}()
+			}
+
+			doneGroup.Wait()
+
+			for i := range points {
+				p := &points[i]
+
+				results, err := tree.FindNearest(p, 1, 0.0)
+
+				if err != nil {
+					t.Fatalf("Expected success looking up point but got error: %v", err)
+				}
+
+				if len(results) == 0 {
+					t.Errorf("Expected point %v to be findable but wasn’t", p)
+				} else if results[0].Item != p {
+					t.Errorf("Expected point %v to be findable but found %v instead", p, results[0].Item)
+				}
+			}
 		})
 	})
 
