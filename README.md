@@ -13,7 +13,15 @@ This software is made available under an [MIT license](LICENSE).
 
 ## Thread safety
 
-[Tree](https://godoc.org/github.com/mandykoh/go-covertree#Tree) instances are thread-safe for readonly access, but should be externally synchronised if concurrent read-write access is required. [Store](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations should observe their own thread-safety considerations.
+[Tree](https://godoc.org/github.com/mandykoh/go-covertree#Tree) instances are thread-safe for readonly access.
+
+Insertions into the tree (using `Insert`) are safe to make concurrently, allowing tree building to be parallelised.
+
+Searching the tree (using `FindNearest`) is safe to do concurrently, including with insertions.
+
+Removals from the tree (using `Remove`) are not thread-safe and should be externally synchronised if concurrent read-write access is required.
+
+[Store](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations should observe their own thread-safety considerations.
 
 
 ## Example usage
@@ -47,7 +55,7 @@ Create a [`Tree`](https://godoc.org/github.com/mandykoh/go-covertree#Tree). A tr
 tree := covertree.NewInMemoryTree(basis, distanceBetween)
 ```
 
-The `basis` specifies the logarithmic base for determining the coverage of nodes at each level of the tree. If unsure, a good starting value is around 2.0.
+The `basis` specifies the logarithmic base for determining the ratio of coverage of nodes at adjacent levels of the tree. If unsure, values around 2.0 may be good starting points.
 
 Custom [`Store`](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations can also use the basic Tree constructor to create trees:
 
@@ -59,7 +67,7 @@ tree, err := covertree.NewTreeWithStore(pointStore, basis, distanceBetween)
 [Insert](https://godoc.org/github.com/mandykoh/go-covertree#Tree.Insert) some things into the tree:
 
 ```go
-inserted, err := tree.Insert(&Point{1.5, 3.14})
+err := tree.Insert(&Point{1.5, 3.14})
 ```
 
 [Find](https://godoc.org/github.com/mandykoh/go-covertree#Tree.FindNearest) the 5 nearest things in the store that are within 10.0 of a query point:

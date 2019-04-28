@@ -40,8 +40,7 @@ func NewTreeWithStore(store Store, basis float64, distanceFunc DistanceFunc) (*T
 // If no items are found matching the given criteria, an empty result set is
 // returned.
 //
-// It is safe for multiple Goroutines to call this method concurrently with
-// calls to Insert.
+// Calls to FindNearest and Insert are safe to make concurrently.
 func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
 	var root interface{}
 	var rootLevel int
@@ -84,8 +83,7 @@ func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float6
 
 // Insert inserts the specified item into the tree.
 //
-// It is safe for multiple Goroutines to call this method concurrently, allowing
-// multiple items to be inserted in parallel.
+// Calls to FindNearest and Insert are safe to make concurrently.
 func (t *Tree) Insert(item interface{}) (err error) {
 	var root interface{}
 	var rootLevel int
@@ -147,6 +145,9 @@ func (t *Tree) Insert(item interface{}) (err error) {
 
 // Remove removes the given item from the tree. If no such item exists in the
 // tree, this has no effect.
+//
+// This method is not safe for concurrent use. Concurrent calls to Remove and
+// to FindNearest or Insert should be externally synchronised.
 func (t *Tree) Remove(item interface{}) (err error) {
 	root, rootLevel, err := t.loadRoot()
 
