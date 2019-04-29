@@ -88,34 +88,54 @@ func (t *Tree) Insert(item interface{}) (err error) {
 	var root interface{}
 	var rootLevel int
 	var cs coverSet
-	var newRoot bool
 
-	t.withWriteLock(func() {
+	t.withReadLock(func() {
 		root, rootLevel, err = t.loadRoot()
 		if err != nil {
 			return
 		}
 
-		// Tree is empty - add item as the new root at infinity
-		if root == nil {
-			newRoot = true
-			err = t.store.AddItem(item, nil, math.MaxInt32)
-			return
-		}
-
-		cs, err = coverSetWithItem(root, nil, t.distanceBetween(root, item), t.store.LoadChildren)
-		if err != nil {
-			return
-		}
-
-		// Tree only has a root at infinity - move root to appropriate level for the new item
-		if rootLevel == math.MaxInt32 {
-			rootLevel = t.levelForDistance(cs[0].withDistance.Distance)
-			err = t.store.UpdateItem(root, nil, rootLevel)
+		if root != nil {
+			cs, err = coverSetWithItem(root, nil, t.distanceBetween(root, item), t.store.LoadChildren)
+			if err != nil {
+				return
+			}
 		}
 	})
-	if err != nil || newRoot {
+	if err != nil {
 		return
+	}
+
+	if root == nil || rootLevel == math.MaxInt32 {
+		var newRoot bool
+
+		t.withWriteLock(func() {
+			root, rootLevel, err = t.loadRoot()
+			if err != nil {
+				return
+			}
+
+			// Tree is empty - add item as the new root at infinity
+			if root == nil {
+				newRoot = true
+				err = t.store.AddItem(item, nil, math.MaxInt32)
+				return
+			}
+
+			cs, err = coverSetWithItem(root, nil, t.distanceBetween(root, item), t.store.LoadChildren)
+			if err != nil {
+				return
+			}
+
+			// Tree only has a root at infinity - move root to appropriate level for the new item
+			if rootLevel == math.MaxInt32 {
+				rootLevel = t.levelForDistance(cs[0].withDistance.Distance)
+				err = t.store.UpdateItem(root, nil, rootLevel)
+			}
+		})
+		if err != nil || newRoot {
+			return
+		}
 	}
 
 	var inserted interface{}
