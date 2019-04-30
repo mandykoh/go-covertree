@@ -308,6 +308,16 @@ func TestTree(t *testing.T) {
 
 	t.Run("Remove()", func(t *testing.T) {
 
+		t.Run("has no effect when the tree is empty", func(t *testing.T) {
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
+
+			err := tree.Remove(randomPoint())
+
+			if err != nil {
+				t.Errorf("Expected removal to have no effect but got error: %v", err)
+			}
+		})
+
 		t.Run("removes item from the tree while preserving its children", func(t *testing.T) {
 			tree := NewInMemoryTree(2, distanceBetweenPoints)
 

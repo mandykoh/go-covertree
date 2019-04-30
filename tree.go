@@ -170,6 +170,9 @@ func (t *Tree) Insert(item interface{}) (err error) {
 // to FindNearest or Insert should be externally synchronised.
 func (t *Tree) Remove(item interface{}) (err error) {
 	root, rootLevel, err := t.loadRoot()
+	if err != nil || root == nil {
+		return err
+	}
 
 	rootDist := t.distanceBetween(item, root)
 	cs, err := coverSetWithItem(root, nil, rootDist, t.store.LoadChildren)
