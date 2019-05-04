@@ -36,7 +36,7 @@ func BenchmarkTree(b *testing.B) {
 					_ = tree.Insert(&p)
 					b.StopTimer()
 
-					_ = tree.Remove(&p)
+					_, _ = tree.Remove(&p)
 				}
 			})
 		}
@@ -311,10 +311,13 @@ func TestTree(t *testing.T) {
 		t.Run("has no effect when the tree is empty", func(t *testing.T) {
 			tree := NewInMemoryTree(2, distanceBetweenPoints)
 
-			err := tree.Remove(randomPoint())
+			removed, err := tree.Remove(randomPoint())
 
 			if err != nil {
 				t.Errorf("Expected removal to have no effect but got error: %v", err)
+			}
+			if removed != nil {
+				t.Errorf("Expected nothing to have been removed but got %v", removed)
 			}
 		})
 
@@ -329,7 +332,11 @@ func TestTree(t *testing.T) {
 			}
 			_, _ = insertPoints(points, tree)
 
-			_ = tree.Remove(&points[2])
+			removed, _ := tree.Remove(&points[2])
+
+			if expected, actual := &points[2], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
+			}
 
 			nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-1, nodeCount; expected != actual {
@@ -344,7 +351,11 @@ func TestTree(t *testing.T) {
 			results, _ = tree.FindNearest(&points[3], 1, 0)
 			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
 
-			_ = tree.Remove(&points[1])
+			removed, _ = tree.Remove(&points[1])
+
+			if expected, actual := &points[1], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
+			}
 
 			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-2, nodeCount; expected != actual {
@@ -359,7 +370,11 @@ func TestTree(t *testing.T) {
 			results, _ = tree.FindNearest(&points[3], 1, 0)
 			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
 
-			_ = tree.Remove(&points[0])
+			removed, _ = tree.Remove(&points[0])
+
+			if expected, actual := &points[0], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
+			}
 
 			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-3, nodeCount; expected != actual {
@@ -374,7 +389,11 @@ func TestTree(t *testing.T) {
 			results, _ = tree.FindNearest(&points[3], 1, 0)
 			expectSameResults(t, points[3], results, []ItemWithDistance{{&points[3], 0}})
 
-			_ = tree.Remove(&points[3])
+			removed, _ = tree.Remove(&points[3])
+
+			if expected, actual := &points[3], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
+			}
 
 			nodeCount = traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-4, nodeCount; expected != actual {
@@ -405,7 +424,12 @@ func TestTree(t *testing.T) {
 				t.Errorf("Expected root to be at level %d but was %d", expected, actual)
 			}
 
-			_ = tree.Remove(&points[1])
+			removed, _ := tree.Remove(&points[1])
+
+			if expected, actual := &points[1], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
+			}
+
 			root, rootLevel, _ = tree.loadRoot()
 
 			nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
@@ -447,39 +471,51 @@ func TestTree(t *testing.T) {
 			store.expectSavedTree(t, 0, &points[0], 4)
 
 			// Removing parent node should cause its uncovered child to bubble up and the root to be promoted
-			err := tree.Remove(&points[1])
+			removed, err := tree.Remove(&points[1])
 			if err != nil {
 				t.Fatalf("Expected removal to succeed but got error: %v", err)
+			}
+			if expected, actual := &points[1], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
 			store.expectSavedTree(t, 1, &points[0], 6)
 
 			// Removing leaf node should not affect metadata
-			err = tree.Remove(&points[3])
+			removed, err = tree.Remove(&points[3])
 			if err != nil {
 				t.Fatalf("Expected removal to succeed but got error: %v", err)
+			}
+			if expected, actual := &points[3], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
 			store.expectSavedTree(t, 1, &points[0], 6)
 
 			// Removing root node should cause child to become the root
-			err = tree.Remove(&points[0])
+			removed, err = tree.Remove(&points[0])
 			if err != nil {
 				t.Fatalf("Expected removal to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 2, &points[2], 6)
+			if expected, actual := &points[0], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
+			}
+			store.expectSavedTree(t, 3, &points[2], 6)
 
 			// Removing final root node should return tree to empty state
-			err = tree.Remove(&points[2])
+			removed, err = tree.Remove(&points[2])
 			if err != nil {
 				t.Fatalf("Expected removal to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 3, nil, 6)
+			if expected, actual := &points[2], removed; expected != actual {
+				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
+			}
+			store.expectSavedTree(t, 5, nil, 6)
 
 			// Re-inserting a node should make it the new root
 			err = tree.Insert(&points[1])
 			if err != nil {
 				t.Fatalf("Expected insertion to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 4, &points[1], math.MaxInt32)
+			store.expectSavedTree(t, 6, &points[1], math.MaxInt32)
 		})
 
 		t.Run("allows all remaining nodes to be findable after removal", func(t *testing.T) {
@@ -497,7 +533,11 @@ func TestTree(t *testing.T) {
 			})
 
 			for i, p := range pointsToRemove {
-				_ = tree.Remove(p)
+				removed, _ := tree.Remove(p)
+
+				if expected, actual := p, removed; expected != actual {
+					t.Errorf("Expected %v to have been removed but got %v", expected, actual)
+				}
 
 				nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
 				if expected, actual := len(points)-i-1, nodeCount; expected != actual {
@@ -797,6 +837,14 @@ func (ts *testStore) AddItem(item, parent interface{}, level int) error {
 		ts.savedRootLevel = level
 	}
 	return ts.inMemoryStore.AddItem(item, parent, level)
+}
+
+func (ts *testStore) RemoveItem(item, parent interface{}, level int) error {
+	if parent == nil {
+		ts.savedCount++
+		ts.savedRoot = nil
+	}
+	return ts.inMemoryStore.RemoveItem(item, parent, level)
 }
 
 func (ts *testStore) UpdateItem(item, parent interface{}, level int) error {
