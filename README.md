@@ -79,5 +79,5 @@ results, err := tree.FindNearest(&Point{0.0, 0.0}, 5, 10.0)
 [Remove](https://godoc.org/github.com/mandykoh/go-covertree#Tree.Remove) things from the store:
 
 ```go
-err := tree.Remove(&Point{1.5, 3.14})
+removed, err := tree.Remove(&Point{1.5, 3.14})
 ```
