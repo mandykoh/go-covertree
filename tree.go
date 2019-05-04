@@ -40,7 +40,7 @@ func NewTreeWithStore(store Store, basis float64, distanceFunc DistanceFunc) (*T
 // If no items are found matching the given criteria, an empty result set is
 // returned.
 //
-// Calls to FindNearest and Insert are safe to make concurrently.
+// Multiple calls to FindNearest and Insert are safe to make concurrently.
 func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float64) (results []ItemWithDistance, err error) {
 	var root interface{}
 	var rootLevel int
@@ -83,7 +83,7 @@ func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float6
 
 // Insert inserts the specified item into the tree.
 //
-// Calls to FindNearest and Insert are safe to make concurrently.
+// Multiple calls to FindNearest and Insert are safe to make concurrently.
 func (t *Tree) Insert(item interface{}) (err error) {
 	var root interface{}
 	var rootLevel int
@@ -166,8 +166,9 @@ func (t *Tree) Insert(item interface{}) (err error) {
 // Remove removes the given item from the tree. If no such item exists in the
 // tree, this has no effect.
 //
-// This method is not safe for concurrent use. Concurrent calls to Remove and
-// to FindNearest or Insert should be externally synchronised.
+// This method is not safe for concurrent use. Calls to Remove should be
+// externally synchronised so they do not execute concurrently with each other
+// or with calls to FindNearest or Insert.
 func (t *Tree) Remove(item interface{}) (err error) {
 	root, rootLevel, err := t.loadRoot()
 	if err != nil || root == nil {
