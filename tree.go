@@ -45,8 +45,9 @@ func (t *Tree) FindNearest(query interface{}, maxResults int, maxDistance float6
 	var root interface{}
 	var rootLevel int
 
-	t.withRootReadLock(func() {
+	err = t.withRootReadLock(func() error {
 		root, rootLevel, err = t.loadRoot()
+		return err
 	})
 	if err != nil || root == nil {
 		return
@@ -89,18 +90,20 @@ func (t *Tree) Insert(item interface{}) (err error) {
 	var rootLevel int
 	var cs coverSet
 
-	t.withRootReadLock(func() {
+	err = t.withRootReadLock(func() error {
 		root, rootLevel, err = t.loadRoot()
 		if err != nil {
-			return
+			return err
 		}
 
 		if root != nil {
 			cs, err = coverSetWithItem(root, nil, t.distanceBetween(root, item), t.store.LoadChildren)
 			if err != nil {
-				return
+				return err
 			}
 		}
+
+		return nil
 	})
 	if err != nil {
 		return
@@ -109,29 +112,31 @@ func (t *Tree) Insert(item interface{}) (err error) {
 	if root == nil || rootLevel == math.MaxInt32 {
 		var newRoot bool
 
-		t.withRootWriteLock(func() {
+		err = t.withRootWriteLock(func() error {
 			root, rootLevel, err = t.loadRoot()
 			if err != nil {
-				return
+				return err
 			}
 
 			// Tree is empty - add item as the new root at infinity
 			if root == nil {
 				newRoot = true
 				err = t.store.AddItem(item, nil, math.MaxInt32)
-				return
+				return err
 			}
 
 			cs, err = coverSetWithItem(root, nil, t.distanceBetween(root, item), t.store.LoadChildren)
 			if err != nil {
-				return
+				return err
 			}
 
 			// Tree only has a root at infinity - move root to appropriate level for the new item
 			if rootLevel == math.MaxInt32 {
 				rootLevel = t.levelForDistance(cs[0].withDistance.Distance)
-				err = t.store.UpdateItem(root, nil, rootLevel)
+				return t.store.UpdateItem(root, nil, rootLevel)
 			}
+
+			return nil
 		})
 		if err != nil || newRoot {
 			return
@@ -146,16 +151,18 @@ func (t *Tree) Insert(item interface{}) (err error) {
 
 			// No covering parent found - promote the current root to cover the
 			// new item and insert it as a child.
-			t.withRootWriteLock(func() {
+			err = t.withRootWriteLock(func() error {
 				root, rootLevel, err = t.loadRoot()
 				if err != nil {
-					return
+					return err
 				}
 
 				rootLevel, err = t.hoistRootForChild(item, math.MinInt32, root, rootLevel)
 				if err == nil {
-					err = t.store.UpdateItem(root, nil, rootLevel)
+					return t.store.UpdateItem(root, nil, rootLevel)
 				}
+
+				return nil
 			})
 		}
 	}
@@ -367,14 +374,14 @@ func (t *Tree) remove(item interface{}, coverSet coverSet, level int) (removed i
 	return
 }
 
-func (t *Tree) withRootReadLock(f func()) {
+func (t *Tree) withRootReadLock(f func() error) error {
 	t.rootMutex.RLock()
 	defer t.rootMutex.RUnlock()
-	f()
+	return t.store.WithRootReadLock(f)
 }
 
-func (t *Tree) withRootWriteLock(f func()) {
+func (t *Tree) withRootWriteLock(f func() error) error {
 	t.rootMutex.Lock()
 	defer t.rootMutex.Unlock()
-	f()
+	return t.store.WithRootWriteLock(f)
 }

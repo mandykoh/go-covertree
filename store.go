@@ -45,4 +45,20 @@ type Store interface {
 	// Implementations are free to assume that this will only be called for
 	// items which have previously been added via AddItem.
 	UpdateItem(item, parent interface{}, level int) error
+
+	// WithRootReadLock invokes f with store-specific locking to guarantee
+	// mutually exlusive read access to the root node of the tree.
+	//
+	// This allows store implementations to provide safe access across multiple
+	// processes accessing the same store. If concurrent access by multiple
+	// processes is not required, implementations can safely just invoke f.
+	WithRootReadLock(f func() error) error
+
+	// WithRootWriteLock invokes f with store-specific locking to guarantee
+	// mutually exlusive read-write access to the root node of the tree.
+	//
+	// This allows store implementations to provide safe access across multiple
+	// processes accessing the same store. If concurrent access by multiple
+	// processes is not required, implementations can safely just invoke f.
+	WithRootWriteLock(f func() error) error
 }

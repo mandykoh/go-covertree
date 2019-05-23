@@ -59,6 +59,14 @@ func (s *inMemoryStore) UpdateItem(item, parent interface{}, level int) error {
 	return nil
 }
 
+func (s *inMemoryStore) WithRootReadLock(f func() error) error {
+	return f()
+}
+
+func (s *inMemoryStore) WithRootWriteLock(f func() error) error {
+	return f()
+}
+
 func (s *inMemoryStore) levelsFor(item interface{}) map[int][]interface{} {
 	levels, ok := s.items[item]
 	if !ok {
