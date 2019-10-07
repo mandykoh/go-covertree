@@ -3,13 +3,19 @@ package covertree
 import (
 	"math"
 	"testing"
+	"time"
 )
 
 func TestTracer(t *testing.T) {
 
+	slowDistanceBetweenPoints := func(a, b interface{}) float64 {
+		time.Sleep(1 * time.Millisecond)
+		return distanceBetweenPoints(a, b)
+	}
+
 	t.Run("FindNearest()", func(t *testing.T) {
-		store := newInMemoryStore(distanceBetweenPoints)
-		tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
+		store := newInMemoryStore(slowDistanceBetweenPoints)
+		tree, _ := NewTreeWithStore(store, 2, slowDistanceBetweenPoints)
 
 		points := []Point{
 			{1.0, 0.0, 0.0},
@@ -79,8 +85,8 @@ func TestTracer(t *testing.T) {
 	})
 
 	t.Run("Insert()", func(t *testing.T) {
-		store := newInMemoryStore(distanceBetweenPoints)
-		tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
+		store := newInMemoryStore(slowDistanceBetweenPoints)
+		tree, _ := NewTreeWithStore(store, 2, slowDistanceBetweenPoints)
 		tracer := tree.NewTracer()
 
 		t.Run("records the maximum cover set size", func(t *testing.T) {
@@ -154,8 +160,8 @@ func TestTracer(t *testing.T) {
 	})
 
 	t.Run("Remove()", func(t *testing.T) {
-		store := newInMemoryStore(distanceBetweenPoints)
-		tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
+		store := newInMemoryStore(slowDistanceBetweenPoints)
+		tree, _ := NewTreeWithStore(store, 2, slowDistanceBetweenPoints)
 
 		points := []Point{
 			{1.0, 0.0, 0.0},
