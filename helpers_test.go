@@ -232,8 +232,9 @@ func newTestStore(distanceFunc DistanceFunc) *testStore {
 }
 
 func (ts *testStore) AddItem(item, parent interface{}, level int) error {
+	ts.savedCount++
+
 	if parent == nil {
-		ts.savedCount++
 		ts.savedRoot = item
 		ts.savedRootLevel = level
 	}
@@ -241,16 +242,18 @@ func (ts *testStore) AddItem(item, parent interface{}, level int) error {
 }
 
 func (ts *testStore) RemoveItem(item, parent interface{}, level int) error {
+	ts.savedCount++
+
 	if parent == nil {
-		ts.savedCount++
 		ts.savedRoot = nil
 	}
 	return ts.inMemoryStore.RemoveItem(item, parent, level)
 }
 
 func (ts *testStore) UpdateItem(item, parent interface{}, level int) error {
+	ts.savedCount++
+
 	if parent == nil {
-		ts.savedCount++
 		ts.savedRoot = item
 		ts.savedRootLevel = level
 	}

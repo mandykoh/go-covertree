@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -231,7 +230,7 @@ func TestTree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 2, p1, 0)
+			store.expectSavedTree(t, 3, p1, 0)
 
 			// Third point is very different and should cause the root to be promoted
 			p3 := &Point{100.0, 0.0, 0.0}
@@ -240,7 +239,7 @@ func TestTree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 3, p1, 8)
+			store.expectSavedTree(t, 5, p1, 8)
 
 			// Fourth point is a new child and should deepen the tree a little without affecting the root
 			p4 := &Point{1.1, 0.0, 0.0}
@@ -249,7 +248,7 @@ func TestTree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 3, p1, 8)
+			store.expectSavedTree(t, 6, p1, 8)
 
 			// Fifth point is another new child at the same depth and also should not cause an update
 			p5 := &Point{2.1, 0.0, 0.0}
@@ -258,49 +257,7 @@ func TestTree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 3, p1, 8)
-		})
-
-		t.Run("is thread-safe", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
-
-			points := randomPoints(10000)
-
-			workers := runtime.NumCPU()
-			var insertQueue = make(chan *Point, workers*2)
-			var doneGroup sync.WaitGroup
-			doneGroup.Add(workers)
-
-			for i := 0; i < workers; i++ {
-				go func() {
-					for p := range insertQueue {
-						_ = tree.Insert(p)
-					}
-					doneGroup.Done()
-				}()
-			}
-
-			for i := range points {
-				insertQueue <- &points[i]
-			}
-			close(insertQueue)
-			doneGroup.Wait()
-
-			for i := range points {
-				p := &points[i]
-
-				results, err := tree.FindNearest(p, 1, 0.0)
-
-				if err != nil {
-					t.Fatalf("Expected success looking up point but got error: %v", err)
-				}
-
-				if len(results) == 0 {
-					t.Errorf("Expected point %v to be findable but wasn’t", p)
-				} else if results[0].Item != p {
-					t.Errorf("Expected point %v to be findable but found %v instead", p, results[0].Item)
-				}
-			}
+			store.expectSavedTree(t, 7, p1, 8)
 		})
 
 		t.Run("is thread-safe with concurrent reads", func(t *testing.T) {
@@ -462,7 +419,7 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[0], root; expected != actual {
 				t.Errorf("Expected root node to be %v before removal but was %v", expected, actual)
 			}
-			if expected, actual := 4, rootLevel; expected != actual {
+			if expected, actual := 6, rootLevel; expected != actual {
 				t.Errorf("Expected root to be at level %d but was %d", expected, actual)
 			}
 
@@ -504,7 +461,7 @@ func TestTree(t *testing.T) {
 			points := []Point{
 				{0.0, 0.0, 0.0},
 				{16.0, 0.0, 0.0},
-				{15.0, 0.0, 6.0},
+				{15.0, 0.0, 1.0},
 				{1.0, 0.0, 0.0},
 			}
 			_, _ = insertPoints(points, tree)
@@ -520,9 +477,9 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[1], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 1, &points[0], 6)
+			store.expectSavedTree(t, 2, &points[0], 4)
 
-			// Removing leaf node should not affect metadata
+			// Removing leaf node should not affect root
 			removed, err = tree.Remove(&points[3])
 			if err != nil {
 				t.Fatalf("Expected removal to succeed but got error: %v", err)
@@ -530,7 +487,7 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[3], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 1, &points[0], 6)
+			store.expectSavedTree(t, 3, &points[0], 4)
 
 			// Removing root node should cause child to become the root
 			removed, err = tree.Remove(&points[0])
@@ -540,7 +497,7 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[0], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 3, &points[2], 6)
+			store.expectSavedTree(t, 5, &points[2], 4)
 
 			// Removing final root node should return tree to empty state
 			removed, err = tree.Remove(&points[2])
@@ -550,17 +507,18 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[2], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 5, nil, 6)
+			store.expectSavedTree(t, 7, nil, 4)
 
 			// Re-inserting a node should make it the new root
 			err = tree.Insert(&points[1])
 			if err != nil {
 				t.Fatalf("Expected insertion to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 6, &points[1], math.MaxInt32)
+			store.expectSavedTree(t, 8, &points[1], math.MaxInt32)
 		})
 
 		t.Run("allows all remaining nodes to be findable after removal", func(t *testing.T) {
+			//rand.Seed(123)
 			tree := NewInMemoryTree(2, distanceBetweenPoints)
 
 			points := randomPoints(100)

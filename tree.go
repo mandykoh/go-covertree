@@ -146,7 +146,7 @@ func (t *Tree) findNearestWithTrace(query interface{}, maxResults int, maxDistan
 	return cs.closest(maxResults, maxDistance), nil
 }
 
-func (t *Tree) hoistRootForChild(child interface{}, minChildLevel int, root interface{}, rootLevel int) (newRootLevel int, err error) {
+func (t *Tree) hoistRootForChild(child interface{}, minChildLevel int, root interface{}, rootLevel int) (newRootLevel, newChildLevel int) {
 	dist := t.distanceBetween(root, child)
 	childLevel := t.levelForDistance(dist)
 	newRootLevel = rootLevel
@@ -158,8 +158,7 @@ func (t *Tree) hoistRootForChild(child interface{}, minChildLevel int, root inte
 		newRootLevel = childLevel + 1
 	}
 
-	err = t.store.UpdateItem(child, root, childLevel)
-	return
+	return newRootLevel, childLevel
 }
 
 func (t *Tree) insert(item interface{}, coverSet coverSet, level int, tracer *Tracer) (inserted interface{}, err error) {
@@ -267,12 +266,15 @@ func (t *Tree) insertWithTrace(item interface{}, tracer *Tracer) (err error) {
 					return err
 				}
 
-				rootLevel, err = t.hoistRootForChild(item, math.MinInt32, root, rootLevel)
+				var childLevel int
+				rootLevel, childLevel = t.hoistRootForChild(item, math.MinInt32, root, rootLevel)
+
+				err = t.store.AddItem(item, root, childLevel)
 				if err == nil {
 					return t.store.UpdateItem(root, nil, rootLevel)
 				}
 
-				return nil
+				return err
 			})
 		}
 	}
@@ -374,7 +376,9 @@ func (t *Tree) removeWithTrace(item interface{}, tracer *Tracer) (removed interf
 				} else {
 
 					// Add all remaining children as children of the new root
-					rootLevel, err = t.hoistRootForChild(item, level, root, rootLevel)
+					var childLevel int
+					rootLevel, childLevel = t.hoistRootForChild(item, level, root, rootLevel)
+					err = t.store.UpdateItem(item, root, childLevel)
 					if err != nil {
 						return nil, err
 					}
@@ -392,7 +396,9 @@ func (t *Tree) removeWithTrace(item interface{}, tracer *Tracer) (removed interf
 			oldRootLevel := rootLevel
 
 			for _, orphan := range orphans {
-				rootLevel, err = t.hoistRootForChild(orphan, math.MinInt32, root, rootLevel)
+				var childLevel int
+				rootLevel, childLevel = t.hoistRootForChild(orphan, math.MinInt32, root, rootLevel)
+				err = t.store.UpdateItem(orphan, root, childLevel)
 				if err != nil {
 					return nil, err
 				}

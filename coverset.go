@@ -27,16 +27,16 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 		if csItem.withDistance.Distance <= distThreshold {
 			childCoverSet = append(childCoverSet, csItem)
 			parentWithinThreshold = csItem.withDistance.Item
-		}
 
-		for _, childItem := range csItem.takeChildrenAt(childLevel) {
-			if childDist := distanceBetween(childItem, query); childDist <= distThreshold {
-				promotedChild, err := itemWithChildrenFromStore(childItem, csItem.withDistance.Item, childDist, loadChildren)
-				if err != nil {
-					return nil, nil, err
+			for _, childItem := range csItem.takeChildrenAt(childLevel) {
+				if childDist := distanceBetween(childItem, query); childDist <= distThreshold {
+					promotedChild, err := itemWithChildrenFromStore(childItem, csItem.withDistance.Item, childDist, loadChildren)
+					if err != nil {
+						return nil, nil, err
+					}
+
+					childCoverSet = append(childCoverSet, promotedChild)
 				}
-
-				childCoverSet = append(childCoverSet, promotedChild)
 			}
 		}
 	}
