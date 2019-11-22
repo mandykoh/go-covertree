@@ -261,8 +261,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("is thread-safe with concurrent reads", func(t *testing.T) {
-			store := newTestStore(distanceBetweenPoints)
-			tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, distanceBetweenPoints)
 
 			points := randomPoints(10000)
 
