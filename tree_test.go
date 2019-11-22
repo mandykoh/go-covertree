@@ -476,7 +476,7 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[1], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 2, &points[0], 4)
+			store.expectSavedTree(t, 3, &points[0], 5)
 
 			// Removing leaf node should not affect root
 			removed, err = tree.Remove(&points[3])
@@ -486,7 +486,7 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[3], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 3, &points[0], 4)
+			store.expectSavedTree(t, 4, &points[0], 5)
 
 			// Removing root node should cause child to become the root
 			removed, err = tree.Remove(&points[0])
@@ -496,7 +496,7 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[0], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 5, &points[2], 4)
+			store.expectSavedTree(t, 6, &points[2], 5)
 
 			// Removing final root node should return tree to empty state
 			removed, err = tree.Remove(&points[2])
@@ -506,14 +506,14 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[2], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 7, nil, 4)
+			store.expectSavedTree(t, 8, nil, 5)
 
 			// Re-inserting a node should make it the new root
 			err = tree.Insert(&points[1])
 			if err != nil {
 				t.Fatalf("Expected insertion to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 8, &points[1], math.MaxInt32)
+			store.expectSavedTree(t, 9, &points[1], math.MaxInt32)
 		})
 
 		t.Run("allows all remaining nodes to be findable after removal", func(t *testing.T) {

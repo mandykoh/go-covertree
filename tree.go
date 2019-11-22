@@ -335,7 +335,7 @@ func (t *Tree) remove(item interface{}, coverSet coverSet, level int, tracer *Tr
 
 			if err == nil {
 				// Try to get orphans adopted by nodes at this level
-				orphans, err = t.adoptOrphans(orphans, item, coverSet, distThreshold, level-1)
+				orphans, err = t.adoptOrphans(orphans, item, coverSet, distThreshold/2, level-1)
 			}
 		}
 	}
