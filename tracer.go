@@ -54,6 +54,10 @@ func (t *Tracer) Remove(item interface{}) (removed interface{}, err error) {
 }
 
 func (t *Tracer) String() string {
+	if t == nil {
+		return "nil"
+	}
+
 	return fmt.Sprintf("%v, cover set size: %d, levels traversed: %d, load children count: %d", t.TotalTime, t.MaxCoverSetSize, t.MaxLevelsTraversed, t.LoadChildrenCount)
 }
 
