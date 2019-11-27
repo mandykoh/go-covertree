@@ -211,7 +211,7 @@ func traverseTree(tree *Tree, store *inMemoryStore, print bool) (nodeCount int) 
 		fmt.Println("---")
 	}
 
-	root, rootLevel, _ := tree.loadRoot()
+	root, rootLevel, _ := tree.loadRoot(tree.NewTracer())
 
 	if root == nil {
 		return 0

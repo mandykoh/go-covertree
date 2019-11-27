@@ -413,7 +413,7 @@ func TestTree(t *testing.T) {
 			}
 			_, _ = insertPoints(points, tree)
 
-			root, rootLevel, _ := tree.loadRoot()
+			root, rootLevel, _ := tree.loadRoot(tree.NewTracer())
 
 			if expected, actual := &points[0], root; expected != actual {
 				t.Errorf("Expected root node to be %v before removal but was %v", expected, actual)
@@ -428,7 +428,7 @@ func TestTree(t *testing.T) {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
 
-			root, rootLevel, _ = tree.loadRoot()
+			root, rootLevel, _ = tree.loadRoot(tree.NewTracer())
 
 			nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-1, nodeCount; expected != actual {

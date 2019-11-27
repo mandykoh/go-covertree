@@ -72,6 +72,26 @@ func TestTracer(t *testing.T) {
 			}
 		})
 
+		t.Run("records the store LoadChildren count", func(t *testing.T) {
+			_, err := tracer.FindNearest(&Point{4.0, 0.0, 0.0}, 1, 0.0)
+			if err != nil {
+				t.Fatalf("Expected success but got error: %v", err)
+			}
+
+			if expected, actual := 3, tracer.LoadChildrenCount; expected != actual {
+				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+
+			_, err = tracer.FindNearest(&Point{3.0, 0.0, 0.0}, 2, math.MaxFloat64)
+			if err != nil {
+				t.Fatalf("Expected success but got error: %v", err)
+			}
+
+			if expected, actual := 4, tracer.LoadChildrenCount; expected != actual {
+				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+		})
+
 		t.Run("records the total search time", func(t *testing.T) {
 			_, err := tracer.FindNearest(&Point{4.0, 0.0, 0.0}, 2, math.MaxFloat64)
 			if err != nil {
@@ -147,6 +167,26 @@ func TestTracer(t *testing.T) {
 			}
 		})
 
+		t.Run("records the store LoadChildren count", func(t *testing.T) {
+			err := tracer.Insert(&Point{2.0, 0.0, 0.0})
+			if err != nil {
+				t.Fatalf("Expected success but got error: %v", err)
+			}
+
+			if expected, actual := 4, tracer.LoadChildrenCount; expected != actual {
+				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+
+			err = tracer.Insert(&Point{4.41, 0.0, 0.0})
+			if err != nil {
+				t.Fatalf("Expected success but got error: %v", err)
+			}
+
+			if expected, actual := 5, tracer.LoadChildrenCount; expected != actual {
+				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+		})
+
 		t.Run("records the total insertion time", func(t *testing.T) {
 			err := tracer.Insert(&Point{4.42, 0.0, 0.0})
 			if err != nil {
@@ -215,6 +255,26 @@ func TestTracer(t *testing.T) {
 
 			if expected, actual := 31, tracer.MaxLevelsTraversed; expected != actual {
 				t.Errorf("Expected maximum traversal depth recorded to be %d but was %d", expected, actual)
+			}
+		})
+
+		t.Run("records the store LoadChildren count", func(t *testing.T) {
+			_, err := tracer.Remove(&Point{4.0, 0.0, 0.0})
+			if err != nil {
+				t.Fatalf("Expected success but got error: %v", err)
+			}
+
+			if expected, actual := 3, tracer.LoadChildrenCount; expected != actual {
+				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+
+			_, err = tracer.Remove(&Point{16.0000001, 0.0, 0.0})
+			if err != nil {
+				t.Fatalf("Expected success but got error: %v", err)
+			}
+
+			if expected, actual := 3, tracer.LoadChildrenCount; expected != actual {
+				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
 			}
 		})
 

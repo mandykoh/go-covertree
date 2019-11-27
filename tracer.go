@@ -11,6 +11,7 @@ type Tracer struct {
 	tree               *Tree
 	MaxCoverSetSize    int
 	MaxLevelsTraversed int
+	LoadChildrenCount  int
 	TotalTime          time.Duration
 }
 
@@ -62,6 +63,11 @@ func (t *Tracer) doWithTrace(f func()) {
 	f()
 }
 
+func (t *Tracer) loadChildren(parent interface{}) (LevelsWithItems, error) {
+	t.LoadChildrenCount++
+	return t.tree.store.LoadChildren(parent)
+}
+
 func (t *Tracer) recordLevel(cs coverSet) {
 	size := len(cs)
 	if size > t.MaxCoverSetSize {
@@ -74,4 +80,5 @@ func (t *Tracer) recordLevel(cs coverSet) {
 func (t *Tracer) reset() {
 	t.MaxCoverSetSize = 0
 	t.MaxLevelsTraversed = 0
+	t.LoadChildrenCount = 0
 }
