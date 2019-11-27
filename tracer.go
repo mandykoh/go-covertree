@@ -1,6 +1,9 @@
 package covertree
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Tracer represents a record for performance metrics of Tree operations.
 //
@@ -48,6 +51,10 @@ func (t *Tracer) Remove(item interface{}) (removed interface{}, err error) {
 		removed, err = t.tree.removeWithTrace(item, t)
 	})
 	return
+}
+
+func (t *Tracer) String() string {
+	return fmt.Sprintf("%v, cover set size: %d, levels traversed: %d, load children count: %d", t.TotalTime, t.MaxCoverSetSize, t.MaxLevelsTraversed, t.LoadChildrenCount)
 }
 
 func (t *Tracer) doWithTrace(f func()) {
