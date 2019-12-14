@@ -2,7 +2,6 @@ package covertree
 
 import (
 	"math"
-	"sync"
 )
 
 // Tree represents a single cover tree.
@@ -11,9 +10,9 @@ import (
 // only by a Store.
 type Tree struct {
 	basis           float64
+	rootLevel       int
 	distanceBetween DistanceFunc
 	store           Store
-	rootMutex       sync.RWMutex
 }
 
 // NewTreeWithStore creates and initialises a Tree using the specified store.
@@ -21,14 +20,20 @@ type Tree struct {
 // basis is the logarithmic base for determining the coverage of nodes at each
 // level of the tree.
 //
+// rootDistance is the minimum expected distance between root nodes. New nodes
+// that exceed this distance will be created as additional roots.
+//
 // distanceFunc is the function used by the tree to determine the distance
 // between two items.
-func NewTreeWithStore(store Store, basis float64, distanceFunc DistanceFunc) (*Tree, error) {
-	return &Tree{
+func NewTreeWithStore(store Store, basis float64, rootDistance float64, distanceFunc DistanceFunc) (*Tree, error) {
+	tree := &Tree{
 		basis:           basis,
 		distanceBetween: distanceFunc,
 		store:           store,
-	}, nil
+	}
+	tree.rootLevel = tree.levelForDistance(rootDistance)
+
+	return tree, nil
 }
 
 // FindNearest returns the nearest items in the tree to the specified query
@@ -102,25 +107,14 @@ func (t *Tree) distanceForLevel(level int) float64 {
 }
 
 func (t *Tree) findNearestWithTrace(query interface{}, maxResults int, maxDistance float64, tracer *Tracer) (results []ItemWithDistance, err error) {
-	var root interface{}
-	var rootLevel int
-
-	err = t.withRootReadLock(func() error {
-		root, rootLevel, err = t.loadRoot(tracer)
-		return err
-	})
-	if err != nil || root == nil {
-		return
-	}
-
-	cs, err := coverSetWithItem(root, nil, t.distanceBetween(root, query), tracer.loadChildren)
+	cs, err := t.loadRootCoverSet(query, tracer)
 	if err != nil {
 		return nil, err
 	}
 
 	tracer.recordLevel(cs)
 
-	for level := rootLevel; !cs.atBottom(); level-- {
+	for level := t.rootLevel; !cs.atBottom(); level-- {
 		distThreshold := t.distanceForLevel(level)
 
 		closest := cs.closest(maxResults, maxDistance)
@@ -192,235 +186,92 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int, tracer *Tr
 	return nil, nil
 }
 
-func (t *Tree) insertWithTrace(item interface{}, tracer *Tracer) (err error) {
-	var root interface{}
-	var rootLevel int
-	var cs coverSet
-
-	err = t.withRootReadLock(func() error {
-		root, rootLevel, err = t.loadRoot(tracer)
-		if err != nil {
-			return err
-		}
-
-		if root != nil {
-			cs, err = coverSetWithItem(root, nil, t.distanceBetween(root, item), tracer.loadChildren)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
+func (t *Tree) insertWithTrace(item interface{}, tracer *Tracer) error {
+	cs, err := t.loadRootCoverSet(item, tracer)
 	if err != nil {
-		return
+		return err
 	}
 
 	tracer.recordLevel(cs)
 
-	if root == nil || rootLevel == math.MaxInt32 {
-		var newRoot bool
-
-		err = t.withRootWriteLock(func() error {
-			root, rootLevel, err = t.loadRoot(tracer)
-			if err != nil {
-				return err
-			}
-
-			// Tree is empty - add item as the new root at infinity
-			if root == nil {
-				newRoot = true
-				err = t.store.AddItem(item, nil, math.MaxInt32)
-				return err
-			}
-
-			cs, err = coverSetWithItem(root, nil, t.distanceBetween(root, item), tracer.loadChildren)
-			if err != nil {
-				return err
-			}
-
-			// Tree only has a root at infinity - move root to appropriate level for the new item
-			if rootLevel == math.MaxInt32 {
-				rootLevel = t.levelForDistance(cs[0].withDistance.Distance)
-				return t.store.UpdateItem(root, nil, rootLevel)
-			}
-
-			return nil
-		})
-		if err != nil || newRoot {
-			return
-		}
-	}
-
 	var inserted interface{}
-	inserted, err = t.insert(item, cs, rootLevel, tracer)
-
-	if err == nil {
-		if inserted == nil {
-
-			// No covering parent found - promote the current root to cover the
-			// new item and insert it as a child.
-			err = t.withRootWriteLock(func() error {
-				root, rootLevel, err = t.loadRoot(tracer)
-				if err != nil {
-					return err
-				}
-
-				var childLevel int
-				rootLevel, childLevel = t.hoistRootForChild(item, math.MinInt32, root, rootLevel)
-
-				err = t.store.AddItem(item, root, childLevel)
-				if err == nil {
-					return t.store.UpdateItem(root, nil, rootLevel)
-				}
-
-				return err
-			})
-		}
+	inserted, err = t.insert(item, cs, t.rootLevel, tracer)
+	if err == nil && inserted == nil {
+		return t.store.AddItem(item, nil, t.rootLevel)
 	}
 
-	return
+	return err
 }
 
 func (t *Tree) levelForDistance(distance float64) int {
 	return int(math.Ceil(math.Log2(distance) / math.Log2(t.basis)))
 }
 
-func (t *Tree) loadRoot(tracer *Tracer) (root interface{}, rootLevel int, err error) {
-	rootLevels, err := tracer.loadChildren(nil)
+func (t *Tree) loadRootCoverSet(query interface{}, tracer *Tracer) (coverSet, error) {
+	roots, err := tracer.loadChildren(nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	for level, items := range rootLevels.items {
-		root = items[0]
-		rootLevel = level
-		break
-	}
-
-	return
+	return coverSetWithItems(roots.itemsAt(t.rootLevel), nil, query, t.distanceBetween, tracer.loadChildren)
 }
 
 func (t *Tree) remove(item interface{}, coverSet coverSet, level int, tracer *Tracer) (removed interface{}, orphans []interface{}, err error) {
-	distThreshold := t.distanceForLevel(level)
+	for i := range coverSet {
+		if coverSet[i].withDistance.Distance == 0 {
+			err = t.store.RemoveItem(coverSet[i].withDistance.Item, coverSet[i].parent, level)
+			if err != nil {
+				return
+			}
+			removed = coverSet[i].withDistance.Item
 
-	childCoverSet, _, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, tracer.loadChildren)
+			for _, child := range coverSet[i].children.items {
+				orphans = append(orphans, child...)
+			}
 
-	if err == nil {
+			// Try to get orphans adopted by one of the siblings of the deleted node
+			orphans, err = t.adoptOrphans(orphans, item, coverSet, t.distanceForLevel(level-1), level-1)
+
+			break
+		}
+	}
+
+	if removed == nil {
+		if coverSet.atBottom() {
+			return
+		}
+
+		distThreshold := t.distanceForLevel(level)
+		childCoverSet, _, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, tracer.loadChildren)
+		if err != nil {
+			return nil, nil, err
+		}
 		tracer.recordLevel(childCoverSet)
 
-		if len(childCoverSet) > 0 {
-			for i := range childCoverSet {
-				if childCoverSet[i].withDistance.Distance == 0 {
-					err = t.store.RemoveItem(childCoverSet[i].withDistance.Item, childCoverSet[i].parent, level-1)
-					if err != nil {
-						return
-					}
-					removed = childCoverSet[i].withDistance.Item
-
-					for _, child := range childCoverSet[i].children.items {
-						orphans = append(orphans, child...)
-					}
-
-					// Try to get orphans adopted by one of the siblings of the deleted node
-					orphans, err = t.adoptOrphans(orphans, item, childCoverSet, t.distanceForLevel(level-2), level-2)
-
-					break
-				}
-			}
-
-			if removed == nil {
-				removed, orphans, err = t.remove(item, childCoverSet, level-1, tracer)
-			}
-
-			if err == nil {
-				// Try to get orphans adopted by nodes at this level
-				orphans, err = t.adoptOrphans(orphans, item, coverSet, distThreshold/2, level-1)
-			}
-		}
+		removed, orphans, err = t.remove(item, childCoverSet, level-1, tracer)
 	}
 
 	return
 }
 
 func (t *Tree) removeWithTrace(item interface{}, tracer *Tracer) (removed interface{}, err error) {
-	root, rootLevel, err := t.loadRoot(tracer)
-	if err != nil || root == nil {
-		return nil, err
-	}
-
-	rootDist := t.distanceBetween(item, root)
-	cs, err := coverSetWithItem(root, nil, rootDist, tracer.loadChildren)
+	cs, err := t.loadRootCoverSet(item, tracer)
 	if err != nil {
 		return nil, err
 	}
 
 	tracer.recordLevel(cs)
 
-	if rootDist == 0 {
-		err = t.store.RemoveItem(root, nil, rootLevel)
-		if err != nil {
-			return
-		}
-
-		removed = root
-		root = nil
-
-		for level, items := range cs[0].children.items {
-			for _, item := range items {
-				if root == nil {
-
-					// Promote one child to be the new root
-					root = item
-
-				} else {
-
-					// Add all remaining children as children of the new root
-					var childLevel int
-					rootLevel, childLevel = t.hoistRootForChild(item, level, root, rootLevel)
-					err = t.store.UpdateItem(item, root, childLevel)
-					if err != nil {
-						return nil, err
-					}
-				}
-			}
-		}
-
-		err = t.store.UpdateItem(root, nil, rootLevel)
-
-	} else {
-		var orphans []interface{}
-		removed, orphans, err = t.remove(item, cs, rootLevel, tracer)
-
-		if err == nil {
-			oldRootLevel := rootLevel
-
-			for _, orphan := range orphans {
-				var childLevel int
-				rootLevel, childLevel = t.hoistRootForChild(orphan, math.MinInt32, root, rootLevel)
-				err = t.store.UpdateItem(orphan, root, childLevel)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			if rootLevel != oldRootLevel {
-				err = t.store.UpdateItem(root, nil, rootLevel)
+	var orphans []interface{}
+	removed, orphans, err = t.remove(item, cs, t.rootLevel, tracer)
+	if err == nil {
+		for _, orphan := range orphans {
+			err = t.store.UpdateItem(orphan, nil, t.rootLevel)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
 
 	return
-}
-
-func (t *Tree) withRootReadLock(f func() error) error {
-	t.rootMutex.RLock()
-	defer t.rootMutex.RUnlock()
-	return t.store.WithRootReadLock(f)
-}
-
-func (t *Tree) withRootWriteLock(f func() error) error {
-	t.rootMutex.Lock()
-	defer t.rootMutex.Unlock()
-	return t.store.WithRootWriteLock(f)
 }

@@ -148,6 +148,21 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 	return results, linearSearchDistanceCalls
 }
 
+func loadRoot(tree *Tree) (root interface{}, rootLevel int, err error) {
+	rootLevels, err := tree.NewTracer().loadChildren(nil)
+	if err != nil {
+		return
+	}
+
+	for level, items := range rootLevels.items {
+		root = items[0]
+		rootLevel = level
+		break
+	}
+
+	return
+}
+
 func randomPoint() (point Point) {
 	for i := 0; i < len(point); i++ {
 		point[i] = rand.Float64() * 1000
@@ -211,20 +226,18 @@ func traverseTree(tree *Tree, store *inMemoryStore, print bool) (nodeCount int) 
 		fmt.Println("---")
 	}
 
-	root, rootLevel, _ := tree.loadRoot(tree.NewTracer())
+	roots, _ := tree.NewTracer().loadChildren(nil)
 
-	if root == nil {
-		return 0
+	for _, root := range roots.itemsAt(tree.rootLevel) {
+		nodeCount += traverseNodes(root, nil, tree.rootLevel, 0, store, print)
 	}
-
-	return traverseNodes(root, nil, rootLevel, 0, store, print)
+	return
 }
 
 type testStore struct {
 	inMemoryStore
-	savedCount     int
-	savedRoot      interface{}
-	savedRootLevel int
+	savedCount int
+	savedRoots []interface{}
 }
 
 func newTestStore(distanceFunc DistanceFunc) *testStore {
@@ -235,8 +248,7 @@ func (ts *testStore) AddItem(item, parent interface{}, level int) error {
 	ts.savedCount++
 
 	if parent == nil {
-		ts.savedRoot = item
-		ts.savedRootLevel = level
+		ts.savedRoots = append(ts.savedRoots, item)
 	}
 	return ts.inMemoryStore.AddItem(item, parent, level)
 }
@@ -245,7 +257,12 @@ func (ts *testStore) RemoveItem(item, parent interface{}, level int) error {
 	ts.savedCount++
 
 	if parent == nil {
-		ts.savedRoot = nil
+		for i := range ts.savedRoots {
+			if item == ts.savedRoots[i] {
+				ts.savedRoots = append(ts.savedRoots[:i], ts.savedRoots[i+1:]...)
+				break
+			}
+		}
 	}
 	return ts.inMemoryStore.RemoveItem(item, parent, level)
 }
@@ -254,23 +271,34 @@ func (ts *testStore) UpdateItem(item, parent interface{}, level int) error {
 	ts.savedCount++
 
 	if parent == nil {
-		ts.savedRoot = item
-		ts.savedRootLevel = level
+		found := false
+		for i := range ts.savedRoots {
+			if item == ts.savedRoots[i] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ts.savedRoots = append(ts.savedRoots, item)
+		}
 	}
 	return ts.inMemoryStore.UpdateItem(item, parent, level)
 }
 
-func (ts *testStore) expectSavedTree(t *testing.T, saveCount int, root interface{}, rootLevel int) {
+func (ts *testStore) expectSavedTree(t *testing.T, saveCount int, roots []interface{}, rootLevel int) {
 	t.Helper()
 
 	if expected, actual := saveCount, ts.savedCount; expected != actual {
 		t.Errorf("Expected tree to have been saved %d times but was saved %d times instead", expected, actual)
 	}
-	if expected, actual := root, ts.savedRoot; expected != actual {
-		t.Errorf("Expected tree root to be %v but was %v", expected, actual)
-	}
-	if expected, actual := rootLevel, ts.savedRootLevel; expected != actual {
-		t.Errorf("Expected tree root level to be at %d but was %d", expected, actual)
+	if expected, actual := len(roots), len(ts.savedRoots); expected != actual {
+		t.Errorf("Expected tree to have %d roots but got %d", expected, actual)
+	} else {
+		for i := range roots {
+			if expected, actual := roots[i], ts.savedRoots[i]; expected != actual {
+				t.Errorf("Expected tree root %v but was %v", expected, actual)
+			}
+		}
 	}
 }
 

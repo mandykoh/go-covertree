@@ -15,7 +15,7 @@ func TestTracer(t *testing.T) {
 
 	t.Run("FindNearest()", func(t *testing.T) {
 		store := newInMemoryStore(slowDistanceBetweenPoints)
-		tree, _ := NewTreeWithStore(store, 2, slowDistanceBetweenPoints)
+		tree, _ := NewTreeWithStore(store, 2, 5.0, slowDistanceBetweenPoints)
 
 		points := []Point{
 			{1.0, 0.0, 0.0},
@@ -106,7 +106,7 @@ func TestTracer(t *testing.T) {
 
 	t.Run("Insert()", func(t *testing.T) {
 		store := newInMemoryStore(slowDistanceBetweenPoints)
-		tree, _ := NewTreeWithStore(store, 2, slowDistanceBetweenPoints)
+		tree, _ := NewTreeWithStore(store, 2, 5.0, slowDistanceBetweenPoints)
 		tracer := tree.NewTracer()
 
 		t.Run("records the maximum cover set size", func(t *testing.T) {
@@ -153,7 +153,7 @@ func TestTracer(t *testing.T) {
 				t.Fatalf("Expected success but got error: %v", err)
 			}
 
-			if expected, actual := 4, tracer.MaxLevelsTraversed; expected != actual {
+			if expected, actual := 5, tracer.MaxLevelsTraversed; expected != actual {
 				t.Errorf("Expected maximum traversal depth recorded to be %d but was %d", expected, actual)
 			}
 
@@ -162,7 +162,7 @@ func TestTracer(t *testing.T) {
 				t.Fatalf("Expected success but got error: %v", err)
 			}
 
-			if expected, actual := 10, tracer.MaxLevelsTraversed; expected != actual {
+			if expected, actual := 11, tracer.MaxLevelsTraversed; expected != actual {
 				t.Errorf("Expected maximum traversal depth recorded to be %d but was %d", expected, actual)
 			}
 		})
@@ -173,7 +173,7 @@ func TestTracer(t *testing.T) {
 				t.Fatalf("Expected success but got error: %v", err)
 			}
 
-			if expected, actual := 4, tracer.LoadChildrenCount; expected != actual {
+			if expected, actual := 3, tracer.LoadChildrenCount; expected != actual {
 				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
 			}
 
@@ -201,7 +201,7 @@ func TestTracer(t *testing.T) {
 
 	t.Run("Remove()", func(t *testing.T) {
 		store := newInMemoryStore(slowDistanceBetweenPoints)
-		tree, _ := NewTreeWithStore(store, 2, slowDistanceBetweenPoints)
+		tree, _ := NewTreeWithStore(store, 2, 32.0, slowDistanceBetweenPoints)
 
 		points := []Point{
 			{1.0, 0.0, 0.0},
@@ -244,7 +244,7 @@ func TestTracer(t *testing.T) {
 				t.Fatalf("Expected success but got error: %v", err)
 			}
 
-			if expected, actual := 4, tracer.MaxLevelsTraversed; expected != actual {
+			if expected, actual := 5, tracer.MaxLevelsTraversed; expected != actual {
 				t.Errorf("Expected maximum traversal depth recorded to be %d but was %d", expected, actual)
 			}
 
@@ -253,7 +253,7 @@ func TestTracer(t *testing.T) {
 				t.Fatalf("Expected success but got error: %v", err)
 			}
 
-			if expected, actual := 31, tracer.MaxLevelsTraversed; expected != actual {
+			if expected, actual := 4, tracer.MaxLevelsTraversed; expected != actual {
 				t.Errorf("Expected maximum traversal depth recorded to be %d but was %d", expected, actual)
 			}
 		})

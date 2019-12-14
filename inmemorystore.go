@@ -51,20 +51,18 @@ func (s *inMemoryStore) UpdateItem(item, parent interface{}, level int) error {
 	defer s.mutex.Unlock()
 
 	if parent == nil {
-		delete(s.items, parent)
+		for level := range s.items[nil] {
+			for i := range s.items[nil][level] {
+				if s.items[nil][level][i] == item {
+					s.items[nil][level] = append(s.items[nil][level][:i], s.items[nil][level][i+1:]...)
+				}
+			}
+		}
 	}
 
 	levels := s.levelsFor(parent)
 	levels[level] = append(levels[level], item)
 	return nil
-}
-
-func (s *inMemoryStore) WithRootReadLock(f func() error) error {
-	return f()
-}
-
-func (s *inMemoryStore) WithRootWriteLock(f func() error) error {
-	return f()
 }
 
 func (s *inMemoryStore) levelsFor(item interface{}) map[int][]interface{} {
@@ -85,7 +83,7 @@ func (s *inMemoryStore) levelsFor(item interface{}) map[int][]interface{} {
 // tend to be used, the in-memory implementation uses pointer equality instead
 // of distance-identity. In particular, this means that removal requires the
 // exact item to be specified in order to be removed.
-func NewInMemoryTree(basis float64, distanceFunc DistanceFunc) *Tree {
-	tree, _ := NewTreeWithStore(newInMemoryStore(distanceFunc), basis, distanceFunc)
+func NewInMemoryTree(basis float64, rootDistance float64, distanceFunc DistanceFunc) *Tree {
+	tree, _ := NewTreeWithStore(newInMemoryStore(distanceFunc), basis, rootDistance, distanceFunc)
 	return tree
 }

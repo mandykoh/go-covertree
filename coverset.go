@@ -2,13 +2,20 @@ package covertree
 
 type coverSet []itemWithChildren
 
-func coverSetWithItem(item, parent interface{}, distance float64, loadChildren func(interface{}) (LevelsWithItems, error)) (coverSet, error) {
-	iwc, err := itemWithChildrenFromStore(item, parent, distance, loadChildren)
-	if err != nil {
-		return nil, err
+func coverSetWithItems(items []interface{}, parent interface{}, query interface{}, distanceFunc DistanceFunc, loadChildren func(interface{}) (LevelsWithItems, error)) (coverSet, error) {
+	var cs coverSet
+
+	for _, item := range items {
+		distance := distanceFunc(item, query)
+		iwc, err := itemWithChildrenFromStore(item, parent, distance, loadChildren)
+		if err != nil {
+			return nil, err
+		}
+
+		cs = append(cs, iwc)
 	}
 
-	return coverSet{iwc}, nil
+	return cs, nil
 }
 
 func (cs coverSet) atBottom() bool {

@@ -25,7 +25,7 @@ func BenchmarkTree(b *testing.B) {
 
 			b.Run(fmt.Sprintf("with tree of size %d", pointCount), func(b *testing.B) {
 				b.StopTimer()
-				tree := NewInMemoryTree(2, distanceBetweenPoints)
+				tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 				_, _ = insertPoints(randomPoints(pointCount), tree)
 
 				for i := 0; i < b.N; i++ {
@@ -51,10 +51,10 @@ func TestTree(t *testing.T) {
 	t.Run("FindNearest()", func(t *testing.T) {
 
 		t.Run("returns no results for empty tree", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 
 			query := randomPoint()
-			results, err := tree.FindNearest(&query, math.MaxInt32, math.MaxFloat64)
+			results, err := tree.FindNearest(&query, 16, math.MaxFloat64)
 
 			if err != nil {
 				t.Fatalf("Expected search to succeed but got error: %v", err)
@@ -65,7 +65,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("returns the only result for tree with a single root node", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 			p := randomPoint()
 			_ = tree.Insert(&p)
 
@@ -79,7 +79,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("with a populated tree", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 
 			points := []Point{
 				{1.0, 0.0, 0.0},
@@ -133,7 +133,7 @@ func TestTree(t *testing.T) {
 	t.Run("Insert()", func(t *testing.T) {
 
 		t.Run("inserts duplicates of the root as children of the original item at the root", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 			store := tree.store.(*inMemoryStore)
 
 			p1 := randomPoint()
@@ -171,7 +171,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("inserts duplicates as children of the original item", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 			store := tree.store.(*inMemoryStore)
 
 			_, _ = insertPoints(randomPoints(2), tree)
@@ -212,56 +212,56 @@ func TestTree(t *testing.T) {
 
 		t.Run("saves the tree root state when it changes", func(t *testing.T) {
 			store := newTestStore(distanceBetweenPoints)
-			tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
+			tree, _ := NewTreeWithStore(store, 2, 10.0, distanceBetweenPoints)
 
-			// First point should become the initial root at infinity
+			// First point should become the initial root at the level for the specified rootDistance
 			p1 := &Point{1.0, 0.0, 0.0}
 			err := tree.Insert(p1)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 1, p1, math.MaxInt32)
+			store.expectSavedTree(t, 1, []interface{}{p1}, tree.rootLevel)
 
-			// Second point should be inserted as a child, establishing the initial levels
+			// Second point should be inserted as a child
 			p2 := &Point{2.0, 0.0, 0.0}
 			err = tree.Insert(p2)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 3, p1, 0)
+			store.expectSavedTree(t, 2, []interface{}{p1}, tree.rootLevel)
 
-			// Third point is very different and should cause the root to be promoted
+			// Third point is very different and should cause a second root to be added
 			p3 := &Point{100.0, 0.0, 0.0}
 			err = tree.Insert(p3)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 5, p1, 8)
+			store.expectSavedTree(t, 3, []interface{}{p1, p3}, 8)
 
-			// Fourth point is a new child and should deepen the tree a little without affecting the root
+			// Fourth point is a new child and should deepen the tree a little
 			p4 := &Point{1.1, 0.0, 0.0}
 			err = tree.Insert(p4)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 6, p1, 8)
+			store.expectSavedTree(t, 4, []interface{}{p1, p3}, 8)
 
-			// Fifth point is another new child at the same depth and also should not cause an update
+			// Fifth point is another new child at the same depth
 			p5 := &Point{2.1, 0.0, 0.0}
 			err = tree.Insert(p5)
 
 			if err != nil {
 				t.Fatalf("Expected insert to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 7, p1, 8)
+			store.expectSavedTree(t, 5, []interface{}{p1, p3}, 8)
 		})
 
 		t.Run("is thread-safe with concurrent reads", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 
 			points := randomPoints(10000)
 
@@ -307,7 +307,7 @@ func TestTree(t *testing.T) {
 	t.Run("Remove()", func(t *testing.T) {
 
 		t.Run("has no effect when the tree is empty", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 
 			removed, err := tree.Remove(randomPoint())
 
@@ -320,7 +320,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("removes item from the tree while preserving its children", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 
 			points := []Point{
 				{1.0, 0.0, 0.0},
@@ -404,7 +404,7 @@ func TestTree(t *testing.T) {
 		})
 
 		t.Run("correctly re-parents orphans that are no longer covered by the root", func(t *testing.T) {
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 
 			points := []Point{
 				{0.0, 0.0, 0.0},
@@ -413,12 +413,12 @@ func TestTree(t *testing.T) {
 			}
 			_, _ = insertPoints(points, tree)
 
-			root, rootLevel, _ := tree.loadRoot(tree.NewTracer())
+			root, rootLevel, _ := loadRoot(tree)
 
 			if expected, actual := &points[0], root; expected != actual {
 				t.Errorf("Expected root node to be %v before removal but was %v", expected, actual)
 			}
-			if expected, actual := 6, rootLevel; expected != actual {
+			if expected, actual := 10, rootLevel; expected != actual {
 				t.Errorf("Expected root to be at level %d but was %d", expected, actual)
 			}
 
@@ -428,7 +428,7 @@ func TestTree(t *testing.T) {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
 
-			root, rootLevel, _ = tree.loadRoot(tree.NewTracer())
+			root, rootLevel, _ = loadRoot(tree)
 
 			nodeCount := traverseTree(tree, tree.store.(*inMemoryStore), false)
 			if expected, actual := len(points)-1, nodeCount; expected != actual {
@@ -438,8 +438,8 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[0], root; expected != actual {
 				t.Errorf("Expected root node to be %v after removal but was %v", expected, actual)
 			}
-			if expected, actual := 6, rootLevel; expected != actual {
-				t.Errorf("Expected root to have been promoted to level %d but was %d", expected, actual)
+			if expected, actual := 10, rootLevel; expected != actual {
+				t.Errorf("Expected root to be at level %d but was %d", expected, actual)
 			}
 
 			// Removed node should no longer be findable
@@ -455,7 +455,7 @@ func TestTree(t *testing.T) {
 
 		t.Run("saves the tree root state when it changes", func(t *testing.T) {
 			store := newTestStore(distanceBetweenPoints)
-			tree, _ := NewTreeWithStore(store, 2, distanceBetweenPoints)
+			tree, _ := NewTreeWithStore(store, 2, 1000.0, distanceBetweenPoints)
 
 			points := []Point{
 				{0.0, 0.0, 0.0},
@@ -466,9 +466,9 @@ func TestTree(t *testing.T) {
 			_, _ = insertPoints(points, tree)
 
 			store.savedCount = 0
-			store.expectSavedTree(t, 0, &points[0], 4)
+			store.expectSavedTree(t, 0, []interface{}{&points[0]}, 4)
 
-			// Removing parent node should cause its uncovered child to bubble up and the root to be promoted
+			// Removing parent node should cause its uncovered child to be made a new root
 			removed, err := tree.Remove(&points[1])
 			if err != nil {
 				t.Fatalf("Expected removal to succeed but got error: %v", err)
@@ -476,9 +476,9 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[1], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 3, &points[0], 5)
+			store.expectSavedTree(t, 2, []interface{}{&points[0], &points[2]}, 5)
 
-			// Removing leaf node should not affect root
+			// Removing leaf node should not affect roots
 			removed, err = tree.Remove(&points[3])
 			if err != nil {
 				t.Fatalf("Expected removal to succeed but got error: %v", err)
@@ -486,9 +486,9 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[3], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 4, &points[0], 5)
+			store.expectSavedTree(t, 3, []interface{}{&points[0], &points[2]}, 5)
 
-			// Removing root node should cause child to become the root
+			// Removing root node should cause remaining root to become the only root
 			removed, err = tree.Remove(&points[0])
 			if err != nil {
 				t.Fatalf("Expected removal to succeed but got error: %v", err)
@@ -496,7 +496,7 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[0], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 6, &points[2], 5)
+			store.expectSavedTree(t, 4, []interface{}{&points[2]}, 5)
 
 			// Removing final root node should return tree to empty state
 			removed, err = tree.Remove(&points[2])
@@ -506,21 +506,21 @@ func TestTree(t *testing.T) {
 			if expected, actual := &points[2], removed; expected != actual {
 				t.Errorf("Expected %v to have been removed but got %v", expected, actual)
 			}
-			store.expectSavedTree(t, 8, nil, 5)
+			store.expectSavedTree(t, 5, nil, 5)
 
-			// Re-inserting a node should make it the new root
+			// Re-inserting a node should make it a new root
 			err = tree.Insert(&points[1])
 			if err != nil {
 				t.Fatalf("Expected insertion to succeed but got error: %v", err)
 			}
-			store.expectSavedTree(t, 9, &points[1], math.MaxInt32)
+			store.expectSavedTree(t, 6, []interface{}{&points[1]}, math.MaxInt32)
 		})
 
 		t.Run("allows all remaining nodes to be findable after removal", func(t *testing.T) {
 			//rand.Seed(123)
-			tree := NewInMemoryTree(2, distanceBetweenPoints)
+			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 
-			points := randomPoints(100)
+			points := randomPoints(10)
 			_, _ = insertPoints(points, tree)
 
 			var pointsToRemove []interface{}
@@ -559,7 +559,7 @@ func TestTree(t *testing.T) {
 	t.Run("with randomly populated tree", func(t *testing.T) {
 		distanceCalls := 0
 		store := newInMemoryStore(distanceBetweenPoints)
-		tree, _ := NewTreeWithStore(store, 2, distanceBetweenPointsWithCounter(&distanceCalls))
+		tree, _ := NewTreeWithStore(store, 2, 1000.0, distanceBetweenPointsWithCounter(&distanceCalls))
 
 		points := randomPoints(1000)
 
