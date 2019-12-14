@@ -15,9 +15,9 @@ This software is made available under an [MIT license](LICENSE).
 
 [Tree](https://godoc.org/github.com/mandykoh/go-covertree#Tree) instances are thread-safe for readonly access.
 
-Insertions into the tree (using `Insert`) are safe to make concurrently, allowing tree building to be parallelised.
+Insertions into the tree (using `Insert`) are purely append-only operations, and safe to make concurrently, allowing tree construction to be parallelised.
 
-Searching the tree (using `FindNearest`) is safe to do concurrently, including with insertions.
+Searching the tree (using `FindNearest`) is purely a read-only operation and safe to do concurrently, including with insertions.
 
 Removals from the tree (using `Remove`) are not thread-safe and should be externally synchronised if concurrent read-write access is required.
 
@@ -52,16 +52,18 @@ func distanceBetween(a, b interface{}) float64 {
 Create a [`Tree`](https://godoc.org/github.com/mandykoh/go-covertree#Tree). A tree using a provided in-memory store can be conveniently created using [`NewInMemoryTree`](https://godoc.org/github.com/mandykoh/go-covertree#NewInMemoryTree):
 
 ```go
-tree := covertree.NewInMemoryTree(basis, distanceBetween)
+tree := covertree.NewInMemoryTree(basis, rootDistance, distanceBetween)
 ```
 
 The `basis` specifies the logarithmic base for determining the ratio of coverage of nodes at adjacent levels of the tree. If unsure, values around 2.0 may be good starting points.
+
+The `rootDistance` specifies the maximum expected distance between nodes (actually the minimum distance between root nodes) and determines when new root nodes are created. This should generally be set to the largest distance between nodes expected for your data set.
 
 Custom [`Store`](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations can also use the basic Tree constructor to create trees:
 
 ```go
 // Creates a tree that is backed by a specific store
-tree, err := covertree.NewTreeWithStore(pointStore, basis, distanceBetween)       
+tree, err := covertree.NewTreeWithStore(pointStore, basis, rootDistance, distanceBetween)       
 ```
 
 [Insert](https://godoc.org/github.com/mandykoh/go-covertree#Tree.Insert) some things into the tree:
