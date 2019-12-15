@@ -53,7 +53,7 @@ func TestInMemoryStore(t *testing.T) {
 
 		t.Run("retrieves existing child items", func(t *testing.T) {
 			allChildren, _ := s.LoadChildren(parent)
-			items := allChildren.itemsAt(7)
+			items := allChildren[0].itemsAt(7)
 
 			if actual, expected := len(items), 2; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)
@@ -72,7 +72,7 @@ func TestInMemoryStore(t *testing.T) {
 
 			allChildren, _ := s.LoadChildren(badParent)
 
-			if actual, expected := len(allChildren.items), 0; actual != expected {
+			if actual, expected := len(allChildren[0].items), 0; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)
 			}
 		})
@@ -81,7 +81,7 @@ func TestInMemoryStore(t *testing.T) {
 			parent := &dummyItem{"parent", 456.0}
 
 			allChildren, _ := s.LoadChildren(parent)
-			items := allChildren.itemsAt(5)
+			items := allChildren[0].itemsAt(5)
 
 			if actual, expected := len(items), 0; actual != expected {
 				t.Errorf("Expected %d items but found %d", expected, actual)

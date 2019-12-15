@@ -213,7 +213,7 @@ func (t *Tree) loadRootCoverSet(query interface{}, tracer *Tracer) (coverSet, er
 		return nil, err
 	}
 
-	return coverSetWithItems(roots.itemsAt(t.rootLevel), nil, query, t.distanceBetween, tracer.loadChildren)
+	return coverSetWithItems(roots[0].itemsAt(t.rootLevel), nil, query, t.distanceBetween, tracer.loadChildren)
 }
 
 func (t *Tree) remove(item interface{}, coverSet coverSet, level int, tracer *Tracer) (removed interface{}, orphans []interface{}, err error) {

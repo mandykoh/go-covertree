@@ -2,17 +2,20 @@ package covertree
 
 type coverSet []itemWithChildren
 
-func coverSetWithItems(items []interface{}, parent interface{}, query interface{}, distanceFunc DistanceFunc, loadChildren func(interface{}) (LevelsWithItems, error)) (coverSet, error) {
+func coverSetWithItems(items []interface{}, parent interface{}, query interface{}, distanceFunc DistanceFunc, loadChildren func(...interface{}) ([]LevelsWithItems, error)) (coverSet, error) {
 	var cs coverSet
 
-	for _, item := range items {
-		distance := distanceFunc(item, query)
-		iwc, err := itemWithChildrenFromStore(item, parent, distance, loadChildren)
+	if len(items) > 0 {
+		children, err := loadChildren(items...)
 		if err != nil {
 			return nil, err
 		}
 
-		cs = append(cs, iwc)
+		for i, item := range items {
+			distance := distanceFunc(item, query)
+			iwc := itemWithChildren{withDistance: ItemWithDistance{item, distance}, parent: parent, children: children[i]}
+			cs = append(cs, iwc)
+		}
 	}
 
 	return cs, nil
@@ -27,8 +30,10 @@ func (cs coverSet) atBottom() bool {
 	return true
 }
 
-func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, loadChildren func(interface{}) (LevelsWithItems, error)) (childCoverSet coverSet, parentWithinThreshold interface{}, err error) {
+func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, loadChildren func(...interface{}) ([]LevelsWithItems, error)) (childCoverSet coverSet, parentWithinThreshold interface{}, err error) {
 	childCoverSet = make(coverSet, 0, len(cs))
+	promotedChildren := make(coverSet, 0, len(cs))
+	promotedChildItems := make([]interface{}, 0, len(cs))
 
 	for _, csItem := range cs {
 		if csItem.withDistance.Distance <= distThreshold {
@@ -37,15 +42,24 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 
 			for _, childItem := range csItem.takeChildrenAt(childLevel) {
 				if childDist := distanceBetween(childItem, query); childDist <= distThreshold {
-					promotedChild, err := itemWithChildrenFromStore(childItem, csItem.withDistance.Item, childDist, loadChildren)
-					if err != nil {
-						return nil, nil, err
-					}
-
-					childCoverSet = append(childCoverSet, promotedChild)
+					promotedChild := itemWithChildren{withDistance: ItemWithDistance{childItem, childDist}, parent: csItem.withDistance.Item}
+					promotedChildren = append(promotedChildren, promotedChild)
+					promotedChildItems = append(promotedChildItems, childItem)
 				}
 			}
 		}
+	}
+
+	if len(promotedChildItems) > 0 {
+		children, err := loadChildren(promotedChildItems...)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for i := range promotedChildItems {
+			promotedChildren[i].children = children[i]
+		}
+		childCoverSet = append(childCoverSet, promotedChildren...)
 	}
 
 	return

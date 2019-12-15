@@ -154,7 +154,7 @@ func loadRoot(tree *Tree) (root interface{}, rootLevel int, err error) {
 		return
 	}
 
-	for level, items := range rootLevels.items {
+	for level, items := range rootLevels[0].items {
 		root = items[0]
 		rootLevel = level
 		break
@@ -213,7 +213,7 @@ func traverseNodes(item, parent interface{}, level int, indentLevel int, store *
 	for i := len(levels) - 1; i >= 0; i-- {
 		l := levels[i]
 		children, _ := store.LoadChildren(item)
-		for _, c := range children.itemsAt(l) {
+		for _, c := range children[0].itemsAt(l) {
 			nodeCount += traverseNodes(c, item, l, indentLevel+1, store, print)
 		}
 	}
@@ -228,7 +228,7 @@ func traverseTree(tree *Tree, store *inMemoryStore, print bool) (nodeCount int) 
 
 	roots, _ := tree.NewTracer().loadChildren(nil)
 
-	for _, root := range roots.itemsAt(tree.rootLevel) {
+	for _, root := range roots[0].itemsAt(tree.rootLevel) {
 		nodeCount += traverseNodes(root, nil, tree.rootLevel, 0, store, print)
 	}
 	return

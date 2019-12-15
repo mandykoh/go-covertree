@@ -74,9 +74,9 @@ func (t *Tracer) doWithTrace(f func()) {
 	f()
 }
 
-func (t *Tracer) loadChildren(parent interface{}) (LevelsWithItems, error) {
+func (t *Tracer) loadChildren(parents ...interface{}) ([]LevelsWithItems, error) {
 	t.LoadChildrenCount++
-	return t.tree.store.LoadChildren(parent)
+	return t.tree.store.LoadChildren(parents...)
 }
 
 func (t *Tracer) recordLevel(cs coverSet) {

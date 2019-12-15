@@ -19,15 +19,18 @@ func (s *inMemoryStore) AddItem(item, parent interface{}, level int) error {
 	return s.UpdateItem(item, parent, level)
 }
 
-func (s *inMemoryStore) LoadChildren(parent interface{}) (result LevelsWithItems, err error) {
+func (s *inMemoryStore) LoadChildren(parents ...interface{}) ([]LevelsWithItems, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	for level, items := range s.items[parent] {
-		result.Set(level, items)
+	results := make([]LevelsWithItems, len(parents))
+	for i := range parents {
+		for level, items := range s.items[parents[i]] {
+			results[i].Set(level, items)
+		}
 	}
 
-	return
+	return results, nil
 }
 
 func (s *inMemoryStore) RemoveItem(item, parent interface{}, level int) error {

@@ -23,10 +23,11 @@ type Store interface {
 	// never-before-seen items.
 	AddItem(item, parent interface{}, level int) error
 
-	// LoadChildren returns the explicit child items of the specified parent
-	// item along with their levels. If parent is nil, this is expected to
-	// return the root item (which is a child of nil).
-	LoadChildren(parent interface{}) (LevelsWithItems, error)
+	// LoadChildren returns the explicit child items of the specified parents
+	// item along with their levels. If a parent is nil, this is expected to
+	// return the root items (which are children of the nil parent). The
+	// children are expected to be returned in the same order as their parents.
+	LoadChildren(parents ...interface{}) (children []LevelsWithItems, err error)
 
 	// RemoveItem disassociates an item in the store from the specified parent
 	// at the given level. If no such item exists, this operation should have no
