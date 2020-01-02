@@ -56,7 +56,7 @@ func TestCoverSet(t *testing.T) {
 				return 6.0
 			}
 
-			store := newInMemoryStore(nil)
+			store := NewInMemoryStore(nil)
 			child, _, _ := cs.child("a", 5.0, 3, mockDistFunc, store.LoadChildren)
 
 			expectResults(t, child, coverSet{

@@ -8,7 +8,7 @@ type inMemoryStore struct {
 	mutex           sync.RWMutex
 }
 
-func newInMemoryStore(distanceFunc DistanceFunc) *inMemoryStore {
+func NewInMemoryStore(distanceFunc DistanceFunc) *inMemoryStore {
 	return &inMemoryStore{
 		distanceBetween: distanceFunc,
 		items:           make(map[interface{}]map[int][]interface{}),
@@ -87,6 +87,6 @@ func (s *inMemoryStore) levelsFor(item interface{}) map[int][]interface{} {
 // of distance-identity. In particular, this means that removal requires the
 // exact item to be specified in order to be removed.
 func NewInMemoryTree(basis float64, rootDistance float64, distanceFunc DistanceFunc) *Tree {
-	tree, _ := NewTreeWithStore(newInMemoryStore(distanceFunc), basis, rootDistance, distanceFunc)
+	tree, _ := NewTreeWithStore(NewInMemoryStore(distanceFunc), basis, rootDistance, distanceFunc)
 	return tree
 }

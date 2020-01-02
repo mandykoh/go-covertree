@@ -558,7 +558,7 @@ func TestTree(t *testing.T) {
 
 	t.Run("with randomly populated tree", func(t *testing.T) {
 		distanceCalls := 0
-		store := newInMemoryStore(distanceBetweenPoints)
+		store := NewInMemoryStore(distanceBetweenPoints)
 		tree, _ := NewTreeWithStore(store, 2, 1000.0, distanceBetweenPointsWithCounter(&distanceCalls))
 
 		points := randomPoints(1000)

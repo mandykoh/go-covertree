@@ -241,7 +241,7 @@ type testStore struct {
 }
 
 func newTestStore(distanceFunc DistanceFunc) *testStore {
-	return &testStore{inMemoryStore: *newInMemoryStore(distanceFunc)}
+	return &testStore{inMemoryStore: *NewInMemoryStore(distanceFunc)}
 }
 
 func (ts *testStore) AddItem(item, parent interface{}, level int) error {

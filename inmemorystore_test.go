@@ -22,7 +22,7 @@ func TestInMemoryStore(t *testing.T) {
 			item := &dummyItem{"child", 123.0}
 			parent := &dummyItem{"parent", 456.0}
 
-			s := newInMemoryStore(nil)
+			s := NewInMemoryStore(nil)
 			_ = s.AddItem(item, parent, 5)
 
 			levels, ok := s.items[parent]
@@ -129,7 +129,7 @@ func TestInMemoryStore(t *testing.T) {
 		t.Run("saves node at the root", func(t *testing.T) {
 			item := &dummyItem{"child", 123.0}
 
-			s := newInMemoryStore(nil)
+			s := NewInMemoryStore(nil)
 			_ = s.UpdateItem(item, nil, 5)
 
 			levels, ok := s.items[nil]
@@ -164,7 +164,7 @@ func TestInMemoryStore(t *testing.T) {
 			item := &dummyItem{"child", 123.0}
 			parent := &dummyItem{"parent", 456.0}
 
-			s := newInMemoryStore(nil)
+			s := NewInMemoryStore(nil)
 			_ = s.UpdateItem(item, parent, 5)
 
 			levels, ok := s.items[parent]

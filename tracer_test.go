@@ -14,7 +14,7 @@ func TestTracer(t *testing.T) {
 	}
 
 	t.Run("FindNearest()", func(t *testing.T) {
-		store := newInMemoryStore(slowDistanceBetweenPoints)
+		store := NewInMemoryStore(slowDistanceBetweenPoints)
 		tree, _ := NewTreeWithStore(store, 2, 5.0, slowDistanceBetweenPoints)
 
 		points := []Point{
@@ -105,7 +105,7 @@ func TestTracer(t *testing.T) {
 	})
 
 	t.Run("Insert()", func(t *testing.T) {
-		store := newInMemoryStore(slowDistanceBetweenPoints)
+		store := NewInMemoryStore(slowDistanceBetweenPoints)
 		tree, _ := NewTreeWithStore(store, 2, 5.0, slowDistanceBetweenPoints)
 		tracer := tree.NewTracer()
 
@@ -200,7 +200,7 @@ func TestTracer(t *testing.T) {
 	})
 
 	t.Run("Remove()", func(t *testing.T) {
-		store := newInMemoryStore(slowDistanceBetweenPoints)
+		store := NewInMemoryStore(slowDistanceBetweenPoints)
 		tree, _ := NewTreeWithStore(store, 2, 32.0, slowDistanceBetweenPoints)
 
 		points := []Point{

@@ -23,6 +23,7 @@ Removals from the tree (using `Remove`) are not thread-safe and should be extern
 
 [Store](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations should observe their own thread-safety considerations.
 
+A [partitioned store](https://godoc.org/github.com/mandykoh/go-covertree#NewPartitionedStore) implementation supports sharding across multiple underlying stores using a partitioning function.
 
 ## Example usage
 
