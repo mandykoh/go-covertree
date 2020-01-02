@@ -6,6 +6,8 @@
 
 `go-covertree` is a [cover tree](http://hunch.net/~jl/projects/cover_tree/icml_final/final-icml.pdf) implementation in Go for nearest-neighbour search and clustering. It uses an extensible backing store interface (suitable to adapting to key-value stores, RDBMSes, etc) to support very large data sets.
 
+For further horizontal scaling, a [partitioned store](https://godoc.org/github.com/mandykoh/go-covertree#NewPartitionedStore) implementation supports sharding across multiple underlying stores using a partitioning function.
+
 See the [API documentation](https://godoc.org/github.com/mandykoh/go-covertree) for more details.
 
 This software is made available under an [MIT license](LICENSE).
@@ -22,8 +24,6 @@ Searching the tree (using `FindNearest`) is purely a read-only operation and saf
 Removals from the tree (using `Remove`) are not thread-safe and should be externally synchronised if concurrent read-write access is required.
 
 [Store](https://godoc.org/github.com/mandykoh/go-covertree#Store) implementations should observe their own thread-safety considerations.
-
-A [partitioned store](https://godoc.org/github.com/mandykoh/go-covertree#NewPartitionedStore) implementation supports sharding across multiple underlying stores using a partitioning function.
 
 ## Example usage
 
