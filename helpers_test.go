@@ -109,7 +109,8 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 
 	startTime := time.Now()
 
-	results = make([]ItemWithDistance, maxResults, maxResults)
+	lastNonNil := 0
+	results = make([]ItemWithDistance, maxResults)
 
 	for i := range points {
 		dist := distanceBetween(query, &points[i])
@@ -122,6 +123,7 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 				for k := len(results) - 1; k > j; k-- {
 					results[k] = results[k-1]
 				}
+				lastNonNil++
 				results[j].Item = &points[i]
 				results[j].Distance = dist
 				break
@@ -129,11 +131,10 @@ func linearSearch(query *Point, points []Point, maxResults int, maxDistance floa
 		}
 	}
 
-	lastNonNil := len(results) - 1
-	for lastNonNil >= 0 && results[lastNonNil].Item == nil {
-		lastNonNil--
+	if lastNonNil > len(results) {
+		lastNonNil = len(results)
 	}
-	results = results[:lastNonNil+1]
+	results = results[:lastNonNil]
 
 	finishTime := time.Now()
 
