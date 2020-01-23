@@ -11,6 +11,36 @@ import (
 
 func BenchmarkTree(b *testing.B) {
 
+	b.Run("FindNearest()", func(b *testing.B) {
+		rand.Seed(123)
+
+		cases := []int{
+			100,
+			1000,
+			10000,
+			100000,
+		}
+
+		for _, pointCount := range cases {
+
+			b.Run(fmt.Sprintf("with tree of size %d", pointCount), func(b *testing.B) {
+				b.StopTimer()
+				tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
+				_, _ = insertPoints(randomPoints(pointCount), tree)
+
+				for i := 0; i < b.N; i++ {
+					p := randomPoint()
+
+					b.StartTimer()
+					_, _ = tree.FindNearest(&p, 16, 50.0)
+					b.StopTimer()
+
+					_, _ = tree.Remove(&p)
+				}
+			})
+		}
+	})
+
 	b.Run("Insert()", func(b *testing.B) {
 		rand.Seed(123)
 
