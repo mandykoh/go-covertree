@@ -16,26 +16,44 @@ func BenchmarkTree(b *testing.B) {
 
 		cases := []int{
 			100,
-			1000,
-			10000,
 			100000,
 		}
 
 		for _, pointCount := range cases {
 
 			b.Run(fmt.Sprintf("with tree of size %d", pointCount), func(b *testing.B) {
-				b.StopTimer()
-				tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
-				_, _ = insertPoints(randomPoints(pointCount), tree)
 
-				for i := 0; i < b.N; i++ {
-					p := randomPoint()
+				constraintCases := []struct {
+					Description string
+					MaxResults  int
+					MaxDistance float64
+				}{
+					{Description: "exact single match", MaxResults: 1, MaxDistance: 0.0},
+					{Description: "many exact matches", MaxResults: 1024, MaxDistance: 0.0},
+					{Description: "nearest single match", MaxResults: 1, MaxDistance: math.MaxFloat64},
+					{Description: "nearest of some close matches", MaxResults: 128, MaxDistance: 50.0},
+					{Description: "nearest of some distant matches", MaxResults: 128, MaxDistance: 500.0},
+					{Description: "nearest of many distant matches", MaxResults: 1024, MaxDistance: 500.0},
+					{Description: "nearest of many matches at any distance", MaxResults: 1024, MaxDistance: math.MaxFloat64},
+				}
 
-					b.StartTimer()
-					_, _ = tree.FindNearest(&p, 16, 50.0)
-					b.StopTimer()
+				for _, constraint := range constraintCases {
 
-					_, _ = tree.Remove(&p)
+					b.Run(constraint.Description, func(b *testing.B) {
+						b.StopTimer()
+						tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
+						_, _ = insertPoints(randomPoints(pointCount), tree)
+
+						for i := 0; i < b.N; i++ {
+							p := randomPoint()
+
+							b.StartTimer()
+							_, _ = tree.FindNearest(&p, constraint.MaxResults, constraint.MaxDistance)
+							b.StopTimer()
+
+							_, _ = tree.Remove(&p)
+						}
+					})
 				}
 			})
 		}
