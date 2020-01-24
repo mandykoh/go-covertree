@@ -36,7 +36,7 @@ func compareWithLinearSearch(tree *Tree, points []Point, maxResults int, maxDist
 	expectSameResults(t, query, coverTreeResults, linearSearchResults)
 
 	if *coverTreeDistanceCalls >= linearSearchDistanceCalls {
-		t.Errorf("Expected cover tree search to require fewer than %d distance comparisons (linear search) but got %d", linearSearchDistanceCalls, coverTreeDistanceCalls)
+		t.Errorf("Expected cover tree search to require fewer than %d distance comparisons (linear search) but got %d", linearSearchDistanceCalls, *coverTreeDistanceCalls)
 	}
 
 	return
