@@ -117,9 +117,8 @@ func (t *Tree) findNearestWithTrace(query interface{}, maxResults int, maxDistan
 	for level := t.rootLevel; !cs.atBottom(); level-- {
 		distThreshold := t.distanceForLevel(level)
 
-		if closest := cs.closest(maxResults, maxDistance); len(closest) > 0 {
-			closestDist := closest[len(closest)-1].Distance
-			distThreshold += math.Min(maxDistance, closestDist)
+		if closest := cs.closest(maxResults, maxDistance); len(closest) == maxResults {
+			distThreshold += closest[len(closest)-1].Distance
 		} else {
 			distThreshold += maxDistance
 		}
