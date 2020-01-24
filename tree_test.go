@@ -633,28 +633,28 @@ func TestTree(t *testing.T) {
 			})
 
 			t.Run("returns correct results for nearest neighbour query", func(t *testing.T) {
-				for i := 0; i < 10; i++ {
+				for i := 0; i < 100; i++ {
 					fmt.Println()
 					compareWithLinearSearch(tree, points, 1, math.MaxFloat64, &distanceCalls, t)
 				}
 			})
 
 			t.Run("returns correct results for k-nearest neighbour query", func(t *testing.T) {
-				for i := 0; i < 10; i++ {
+				for i := 0; i < 100; i++ {
 					fmt.Println()
 					compareWithLinearSearch(tree, points, 8, math.MaxFloat64, &distanceCalls, t)
 				}
 			})
 
 			t.Run("returns correct results for bounded distance query", func(t *testing.T) {
-				for i := 0; i < 10; i++ {
+				for i := 0; i < 100; i++ {
 					fmt.Println()
 					compareWithLinearSearch(tree, points, 1, 25, &distanceCalls, t)
 				}
 			})
 
 			t.Run("returns correct results for k-nearest bounded distance query", func(t *testing.T) {
-				for i := 0; i < 10; i++ {
+				for i := 0; i < 100; i++ {
 					fmt.Println()
 					compareWithLinearSearch(tree, points, 8, 50, &distanceCalls, t)
 				}
