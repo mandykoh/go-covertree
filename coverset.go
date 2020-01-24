@@ -66,7 +66,7 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 }
 
 func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
-	lastNonNil := 0
+	closestCount := 0
 	mins := make([]ItemWithDistance, maxItems)
 
 	for i := range cs {
@@ -76,18 +76,17 @@ func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
 
 		for j := range mins {
 			if mins[j].Item == nil || cs[i].withDistance.Distance < mins[j].Distance {
-				for k := len(mins) - 1; k > j; k-- {
+				if closestCount < maxItems {
+					closestCount++
+				}
+				for k := closestCount - 1; k > j; k-- {
 					mins[k] = mins[k-1]
 				}
-				lastNonNil++
 				mins[j] = cs[i].withDistance
 				break
 			}
 		}
 	}
 
-	if lastNonNil > len(mins) {
-		lastNonNil = len(mins)
-	}
-	return mins[:lastNonNil]
+	return mins[:closestCount]
 }
