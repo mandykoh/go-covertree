@@ -1,5 +1,7 @@
 package covertree
 
+import "math"
+
 type coverSet struct {
 	layers    []coverSetLayer
 	itemCount int
@@ -50,15 +52,19 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 
 	var promotedChildren []itemWithChildren
 	var promotedChildItems []interface{}
+	var parentDistance = math.MaxFloat64
 
 	for i := range cs.layers {
 		layer := cs.layers[i].constrainedToDistance(distThreshold)
 		childCoverSet.layers[i] = layer
 		childCoverSet.itemCount += len(layer)
 
-		for _, csItem := range layer {
-			parentWithinThreshold = csItem.withDistance.Item
+		if len(layer) > 0 && layer[0].withDistance.Distance < parentDistance {
+			parentWithinThreshold = layer[0].withDistance.Item
+			parentDistance = layer[0].withDistance.Distance
+		}
 
+		for _, csItem := range layer {
 			for _, childItem := range csItem.takeChildrenAt(childLevel) {
 				if childDist := distanceBetween(childItem, query); childDist <= distThreshold {
 					promotedChild := itemWithChildren{withDistance: ItemWithDistance{childItem, childDist}, parent: csItem.withDistance.Item}
@@ -75,7 +81,7 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 			return childCoverSet, nil, err
 		}
 
-		for i := range promotedChildItems {
+		for i := range promotedChildren {
 			promotedChildren[i].children = children[i]
 		}
 
@@ -87,12 +93,12 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 
 func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
 	var results []ItemWithDistance
-	minIndices := make([]int, len(cs.layers))
+	var minIndices = make([]int, len(cs.layers))
 
 	for len(results) < maxItems {
-		var minItem ItemWithDistance
-		minLayerIndex := -1
 
+		var minItem ItemWithDistance
+		var minLayerIndex = -1
 		for layerIndex, layer := range cs.layers {
 			minIndex := minIndices[layerIndex]
 			if minIndex >= len(layer) {
@@ -100,11 +106,6 @@ func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
 			}
 
 			item := layer[minIndex].withDistance
-			if item.Distance > maxDist {
-				minIndices[layerIndex] = len(layer)
-				continue
-			}
-
 			if minLayerIndex == -1 || item.Distance < minItem.Distance {
 				minLayerIndex = layerIndex
 				minItem = item
