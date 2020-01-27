@@ -155,7 +155,7 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int, tracer *Tr
 	distThreshold := t.distanceForLevel(level)
 
 	childCoverSet, parentWithinThreshold, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, tracer.loadChildren)
-	if err != nil || childCoverSet.itemCount == 0 {
+	if err != nil || childCoverSet.visibleItemCount == 0 {
 		return nil, err
 	}
 

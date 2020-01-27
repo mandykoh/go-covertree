@@ -3,8 +3,9 @@ package covertree
 import "math"
 
 type coverSet struct {
-	layers    []coverSetLayer
-	itemCount int
+	layers           []coverSetLayer
+	totalItemCount   int
+	visibleItemCount int
 }
 
 func coverSetWithItems(items []interface{}, parent interface{}, query interface{}, distanceFunc DistanceFunc, loadChildren func(...interface{}) ([]LevelsWithItems, error)) (coverSet, error) {
@@ -30,7 +31,8 @@ func coverSetWithItems(items []interface{}, parent interface{}, query interface{
 
 func (cs *coverSet) addLayer(layer coverSetLayer) {
 	cs.layers = append(cs.layers, layer)
-	cs.itemCount += len(layer)
+	cs.totalItemCount += len(layer)
+	cs.visibleItemCount += len(layer)
 }
 
 func (cs coverSet) atBottom() bool {
@@ -46,8 +48,9 @@ func (cs coverSet) atBottom() bool {
 
 func (cs coverSet) child(query interface{}, distThreshold float64, childLevel int, distanceBetween DistanceFunc, loadChildren func(...interface{}) ([]LevelsWithItems, error)) (childCoverSet coverSet, parentWithinThreshold interface{}, err error) {
 	childCoverSet = coverSet{
-		layers:    cs.layers,
-		itemCount: 0,
+		layers:           cs.layers,
+		totalItemCount:   cs.totalItemCount,
+		visibleItemCount: 0,
 	}
 
 	var promotedChildren []itemWithChildren
@@ -57,7 +60,7 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 	for i := range cs.layers {
 		layer := cs.layers[i].constrainedToDistance(distThreshold)
 		childCoverSet.layers[i] = layer
-		childCoverSet.itemCount += len(layer)
+		childCoverSet.visibleItemCount += len(layer)
 
 		if len(layer) > 0 && layer[0].withDistance.Distance < parentDistance {
 			parentWithinThreshold = layer[0].withDistance.Item

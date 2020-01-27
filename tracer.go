@@ -11,11 +11,12 @@ import (
 //
 // Tracers are not thread safe and should not be shared by multiple Goroutines.
 type Tracer struct {
-	tree               *Tree
-	MaxCoverSetSize    int
-	MaxLevelsTraversed int
-	LoadChildrenCount  int
-	TotalTime          time.Duration
+	tree                *Tree
+	TotalCoveredSetSize int
+	MaxCoverSetSize     int
+	MaxLevelsTraversed  int
+	LoadChildrenCount   int
+	TotalTime           time.Duration
 }
 
 // FindNearest returns the nearest items in the tree to the specified query
@@ -80,7 +81,9 @@ func (t *Tracer) loadChildren(parents ...interface{}) ([]LevelsWithItems, error)
 }
 
 func (t *Tracer) recordLevel(cs coverSet) {
-	size := cs.itemCount
+	t.TotalCoveredSetSize = cs.totalItemCount
+
+	size := cs.visibleItemCount
 	if size > t.MaxCoverSetSize {
 		t.MaxCoverSetSize = size
 	}
@@ -89,6 +92,7 @@ func (t *Tracer) recordLevel(cs coverSet) {
 }
 
 func (t *Tracer) reset() {
+	t.TotalCoveredSetSize = 0
 	t.MaxCoverSetSize = 0
 	t.MaxLevelsTraversed = 0
 	t.LoadChildrenCount = 0

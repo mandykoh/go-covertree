@@ -16,8 +16,12 @@ func TestCoverSet(t *testing.T) {
 				t.Fatalf("Expected %d layers in cover set but found %d instead", expected, actual)
 			}
 
-			if expected, actual := expectedResults.itemCount, actualResults.itemCount; expected != actual {
-				t.Errorf("Expected cover set to have item count of %d but was %d", expected, actual)
+			if expected, actual := expectedResults.totalItemCount, actualResults.totalItemCount; expected != actual {
+				t.Errorf("Expected cover set to have total item count of %d but was %d", expected, actual)
+			}
+
+			if expected, actual := expectedResults.visibleItemCount, actualResults.visibleItemCount; expected != actual {
+				t.Errorf("Expected cover set to have visible item count of %d but was %d", expected, actual)
 			}
 
 			for layerNum := 0; layerNum < len(expectedResults.layers); layerNum++ {
@@ -54,6 +58,7 @@ func TestCoverSet(t *testing.T) {
 			child, _, _ := cs.child("a", 2.0, 0, nil, nil)
 
 			var expectedCoverSet coverSet
+			expectedCoverSet.totalItemCount = 1
 			expectedCoverSet.addLayer(makeCoverSetLayer([]itemWithChildren{
 				{withDistance: ItemWithDistance{"a", 0.0}},
 				{withDistance: ItemWithDistance{"c", 1.0}},
@@ -81,6 +86,7 @@ func TestCoverSet(t *testing.T) {
 			child, _, _ := cs.child("a", 5.0, 3, mockDistFunc, store.LoadChildren)
 
 			var expectedCoverSet coverSet
+			expectedCoverSet.totalItemCount = 1
 			expectedCoverSet.addLayer(makeCoverSetLayer([]itemWithChildren{
 				cs.layers[0][0],
 			}))
