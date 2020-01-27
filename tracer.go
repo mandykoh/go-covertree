@@ -59,7 +59,7 @@ func (t *Tracer) String() string {
 		return "nil"
 	}
 
-	return fmt.Sprintf("%v, cover set size: %d, levels traversed: %d, load children count: %d", t.TotalTime, t.MaxCoverSetSize, t.MaxLevelsTraversed, t.LoadChildrenCount)
+	return fmt.Sprintf("%v, total covered set size: %d, max visible cover set size: %d, levels traversed: %d, load children count: %d", t.TotalTime, t.TotalCoveredSetSize, t.MaxCoverSetSize, t.MaxLevelsTraversed, t.LoadChildrenCount)
 }
 
 func (t *Tracer) doWithTrace(f func()) {
