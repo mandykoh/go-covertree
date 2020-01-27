@@ -15,12 +15,8 @@ func (l coverSetLayer) constrainedToDistance(distance float64) coverSetLayer {
 }
 
 func makeCoverSetLayer(items []itemWithChildren) coverSetLayer {
-	layer := make(coverSetLayer, len(items))
-	copy(layer, items)
-
-	sort.Slice(layer, func(i, j int) bool {
-		return layer[i].withDistance.Distance < layer[j].withDistance.Distance
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].withDistance.Distance < items[j].withDistance.Distance
 	})
-
-	return layer
+	return items
 }
