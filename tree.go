@@ -83,15 +83,17 @@ func (t *Tree) adoptOrphans(orphans []interface{}, query interface{}, parents co
 
 nextOrphan:
 	for _, item := range orphans {
-		for _, parent := range parents {
-			if parent.withDistance.Item != query && t.distanceBetween(item, parent.withDistance.Item) <= distThreshold {
+		for _, layer := range parents.layers {
+			for _, parent := range layer {
+				if parent.withDistance.Item != query && t.distanceBetween(item, parent.withDistance.Item) <= distThreshold {
 
-				err := t.store.UpdateItem(item, parent.withDistance.Item, childLevel)
-				if err != nil {
-					return nil, err
+					err := t.store.UpdateItem(item, parent.withDistance.Item, childLevel)
+					if err != nil {
+						return nil, err
+					}
+
+					continue nextOrphan
 				}
-
-				continue nextOrphan
 			}
 		}
 
@@ -153,16 +155,18 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int, tracer *Tr
 	distThreshold := t.distanceForLevel(level)
 
 	childCoverSet, parentWithinThreshold, err := coverSet.child(item, distThreshold, level-1, t.distanceBetween, tracer.loadChildren)
-	if err != nil || len(childCoverSet) == 0 {
+	if err != nil || childCoverSet.itemCount == 0 {
 		return nil, err
 	}
 
 	tracer.recordLevel(childCoverSet)
 
 	// A matching child which is at zero distance - item is a duplicate so insert it as a child
-	if childCoverSet[0].withDistance.Distance == 0 {
-		err = t.store.AddItem(item, childCoverSet[0].withDistance.Item, level-2)
-		return item, err
+	if layer := childCoverSet.layers[len(childCoverSet.layers)-1]; len(layer) > 0 {
+		if layer[0].withDistance.Distance == 0 {
+			err = t.store.AddItem(item, layer[0].withDistance.Item, level-2)
+			return item, err
+		}
 	}
 
 	// Look for a suitable parent amongst the children
@@ -204,29 +208,31 @@ func (t *Tree) levelForDistance(distance float64) int {
 func (t *Tree) loadRootCoverSet(query interface{}, tracer *Tracer) (coverSet, error) {
 	roots, err := tracer.loadChildren(nil)
 	if err != nil {
-		return nil, err
+		return coverSet{}, err
 	}
 
 	return coverSetWithItems(roots[0].itemsAt(t.rootLevel), nil, query, t.distanceBetween, tracer.loadChildren)
 }
 
 func (t *Tree) remove(item interface{}, coverSet coverSet, level int, tracer *Tracer) (removed interface{}, orphans []interface{}, err error) {
-	for i := range coverSet {
-		if coverSet[i].withDistance.Distance == 0 {
-			err = t.store.RemoveItem(coverSet[i].withDistance.Item, coverSet[i].parent, level)
-			if err != nil {
-				return
+	for _, layer := range coverSet.layers {
+		for i := range layer {
+			if layer[i].withDistance.Distance == 0 {
+				err = t.store.RemoveItem(layer[i].withDistance.Item, layer[i].parent, level)
+				if err != nil {
+					return
+				}
+				removed = layer[i].withDistance.Item
+
+				for _, child := range layer[i].children.items {
+					orphans = append(orphans, child...)
+				}
+
+				// Try to get orphans adopted by one of the siblings of the deleted node
+				orphans, err = t.adoptOrphans(orphans, item, coverSet, t.distanceForLevel(level-1), level-1)
+
+				break
 			}
-			removed = coverSet[i].withDistance.Item
-
-			for _, child := range coverSet[i].children.items {
-				orphans = append(orphans, child...)
-			}
-
-			// Try to get orphans adopted by one of the siblings of the deleted node
-			orphans, err = t.adoptOrphans(orphans, item, coverSet, t.distanceForLevel(level-1), level-1)
-
-			break
 		}
 	}
 

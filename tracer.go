@@ -80,7 +80,7 @@ func (t *Tracer) loadChildren(parents ...interface{}) ([]LevelsWithItems, error)
 }
 
 func (t *Tracer) recordLevel(cs coverSet) {
-	size := len(cs)
+	size := cs.itemCount
 	if size > t.MaxCoverSetSize {
 		t.MaxCoverSetSize = size
 	}
