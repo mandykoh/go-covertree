@@ -37,12 +37,13 @@ func BenchmarkTree(b *testing.B) {
 					{Description: "nearest of many matches at any distance", MaxResults: 1024, MaxDistance: math.MaxFloat64},
 				}
 
+				tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
+				_, _ = insertPoints(randomPoints(pointCount), tree)
+
 				for _, constraint := range constraintCases {
 
 					b.Run(constraint.Description, func(b *testing.B) {
 						b.StopTimer()
-						tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
-						_, _ = insertPoints(randomPoints(pointCount), tree)
 
 						for i := 0; i < b.N; i++ {
 							p := randomPoint()
