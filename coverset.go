@@ -54,17 +54,16 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 	}
 
 	var promotedChildren []itemWithChildren
-	var promotedChildItems []interface{}
-	var parentDistance = math.MaxFloat64
+	var minParentDistance = math.MaxFloat64
 
 	for i := range cs.layers {
 		layer := cs.layers[i].constrainedToDistance(distThreshold)
 		childCoverSet.layers[i] = layer
 		childCoverSet.visibleItemCount += len(layer)
 
-		if len(layer) > 0 && layer[0].withDistance.Distance < parentDistance {
+		if len(layer) > 0 && layer[0].withDistance.Distance < minParentDistance {
 			parentWithinThreshold = layer[0].withDistance.Item
-			parentDistance = layer[0].withDistance.Distance
+			minParentDistance = layer[0].withDistance.Distance
 		}
 
 		for _, csItem := range layer {
@@ -72,20 +71,24 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 				if childDist := distanceBetween(childItem, query); childDist <= distThreshold {
 					promotedChild := itemWithChildren{withDistance: ItemWithDistance{childItem, childDist}, parent: csItem.withDistance.Item}
 					promotedChildren = append(promotedChildren, promotedChild)
-					promotedChildItems = append(promotedChildItems, childItem)
 				}
 			}
 		}
 	}
 
-	if len(promotedChildItems) > 0 {
-		children, err := loadChildren(promotedChildItems...)
+	if len(promotedChildren) > 0 {
+		children := make([]interface{}, len(promotedChildren))
+		for i := range promotedChildren {
+			children[i] = promotedChildren[i].withDistance.Item
+		}
+
+		grandchildren, err := loadChildren(children...)
 		if err != nil {
 			return childCoverSet, nil, err
 		}
 
 		for i := range promotedChildren {
-			promotedChildren[i].children = children[i]
+			promotedChildren[i].children = grandchildren[i]
 		}
 
 		childCoverSet.addLayer(makeCoverSetLayer(promotedChildren))
@@ -94,13 +97,13 @@ func (cs coverSet) child(query interface{}, distThreshold float64, childLevel in
 	return
 }
 
-func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
-	var results []ItemWithDistance
+func (cs coverSet) bound(maxItems int, maxDist float64) float64 {
+	var count = 0
 	var minIndices = make([]int, len(cs.layers))
+	var boundDistance = maxDist
 
-	for len(results) < maxItems {
+	for count < maxItems {
 
-		var minItem ItemWithDistance
 		var minLayerIndex = -1
 		for layerIndex, layer := range cs.layers {
 			minIndex := minIndices[layerIndex]
@@ -108,7 +111,43 @@ func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
 				continue
 			}
 
-			item := layer[minIndex].withDistance
+			itemDistance := layer[minIndex].withDistance.Distance
+			if minLayerIndex == -1 || itemDistance < boundDistance {
+				minLayerIndex = layerIndex
+				boundDistance = itemDistance
+			}
+		}
+
+		if minLayerIndex == -1 || boundDistance > maxDist {
+			break
+		}
+
+		count++
+		minIndices[minLayerIndex]++
+	}
+
+	if count == maxItems {
+		return boundDistance
+	}
+
+	return maxDist
+}
+
+func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
+	var results []ItemWithDistance
+	var minIndices = make([]int, len(cs.layers))
+
+	for len(results) < maxItems {
+
+		var minItem *ItemWithDistance
+		var minLayerIndex = -1
+		for layerIndex, layer := range cs.layers {
+			minIndex := minIndices[layerIndex]
+			if minIndex >= len(layer) {
+				continue
+			}
+
+			item := &layer[minIndex].withDistance
 			if minLayerIndex == -1 || item.Distance < minItem.Distance {
 				minLayerIndex = layerIndex
 				minItem = item
@@ -119,7 +158,7 @@ func (cs coverSet) closest(maxItems int, maxDist float64) []ItemWithDistance {
 			break
 		}
 
-		results = append(results, minItem)
+		results = append(results, *minItem)
 		minIndices[minLayerIndex]++
 	}
 
