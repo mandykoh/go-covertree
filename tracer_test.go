@@ -261,7 +261,12 @@ func TestTracer(t *testing.T) {
 		t.Run("records the total insertion time", func(t *testing.T) {
 			tracer := setup()
 
-			err := tracer.Insert(&Point{4.42, 0.0, 0.0})
+			err := tracer.Insert(&Point{3.0, 0.0, 0.0})
+			if err != nil {
+				t.Fatalf("Expected success but got error: %v", err)
+			}
+
+			err = tracer.Insert(&Point{4.42, 0.0, 0.0})
 			if err != nil {
 				t.Fatalf("Expected success but got error: %v", err)
 			}
