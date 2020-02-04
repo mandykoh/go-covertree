@@ -92,7 +92,7 @@ func TestTracer(t *testing.T) {
 			}
 		})
 
-		t.Run("records the store LoadChildren count", func(t *testing.T) {
+		t.Run("records the store LoadChildren statistics", func(t *testing.T) {
 			_, err := tracer.FindNearest(&Point{4.0, 0.0, 0.0}, 1, 0.0)
 			if err != nil {
 				t.Fatalf("Expected success but got error: %v", err)
@@ -100,6 +100,9 @@ func TestTracer(t *testing.T) {
 
 			if expected, actual := 3, tracer.LoadChildrenCount; expected != actual {
 				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+			if tracer.TotalLoadChildrenTime == 0 {
+				t.Errorf("Expected total time of LoadChildren operations to be non-zero but was zero")
 			}
 
 			_, err = tracer.FindNearest(&Point{3.0, 0.0, 0.0}, 2, math.MaxFloat64)
@@ -109,6 +112,9 @@ func TestTracer(t *testing.T) {
 
 			if expected, actual := 4, tracer.LoadChildrenCount; expected != actual {
 				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+			if tracer.TotalLoadChildrenTime == 0 {
+				t.Errorf("Expected total time of LoadChildren operations to be non-zero but was zero")
 			}
 		})
 
@@ -236,7 +242,7 @@ func TestTracer(t *testing.T) {
 			}
 		})
 
-		t.Run("records the store LoadChildren count", func(t *testing.T) {
+		t.Run("records the store LoadChildren statistics", func(t *testing.T) {
 			tracer := setup()
 
 			err := tracer.Insert(&Point{2.0, 0.0, 0.0})
@@ -247,6 +253,9 @@ func TestTracer(t *testing.T) {
 			if expected, actual := 1, tracer.LoadChildrenCount; expected != actual {
 				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
 			}
+			if tracer.TotalLoadChildrenTime == 0 {
+				t.Errorf("Expected total time of LoadChildren operations to be non-zero but was zero")
+			}
 
 			err = tracer.Insert(&Point{4.41, 0.0, 0.0})
 			if err != nil {
@@ -255,6 +264,9 @@ func TestTracer(t *testing.T) {
 
 			if expected, actual := 2, tracer.LoadChildrenCount; expected != actual {
 				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+			if tracer.TotalLoadChildrenTime == 0 {
+				t.Errorf("Expected total time of LoadChildren operations to be non-zero but was zero")
 			}
 		})
 
@@ -368,7 +380,7 @@ func TestTracer(t *testing.T) {
 			}
 		})
 
-		t.Run("records the store LoadChildren count", func(t *testing.T) {
+		t.Run("records the store LoadChildren statistics", func(t *testing.T) {
 			tracer := setup(t)
 
 			_, err := tracer.Remove(&Point{4.0, 0.0, 0.0})
@@ -379,6 +391,9 @@ func TestTracer(t *testing.T) {
 			if expected, actual := 5, tracer.LoadChildrenCount; expected != actual {
 				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
 			}
+			if tracer.TotalLoadChildrenTime == 0 {
+				t.Errorf("Expected total time of LoadChildren operations to be non-zero but was zero")
+			}
 
 			_, err = tracer.Remove(&Point{16.0000001, 0.0, 0.0})
 			if err != nil {
@@ -387,6 +402,9 @@ func TestTracer(t *testing.T) {
 
 			if expected, actual := 3, tracer.LoadChildrenCount; expected != actual {
 				t.Errorf("Expected count of LoadChildren operations to be %d but was %d", expected, actual)
+			}
+			if tracer.TotalLoadChildrenTime == 0 {
+				t.Errorf("Expected total time of LoadChildren operations to be non-zero but was zero")
 			}
 		})
 

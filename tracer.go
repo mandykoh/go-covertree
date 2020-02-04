@@ -11,12 +11,13 @@ import (
 //
 // Tracers are not thread safe and should not be shared by multiple Goroutines.
 type Tracer struct {
-	tree                *Tree
-	TotalCoveredSetSize int
-	MaxCoverSetSize     int
-	MaxLevelsTraversed  int
-	LoadChildrenCount   int
-	TotalTime           time.Duration
+	tree                  *Tree
+	TotalCoveredSetSize   int
+	MaxCoverSetSize       int
+	MaxLevelsTraversed    int
+	LoadChildrenCount     int
+	TotalLoadChildrenTime time.Duration
+	TotalTime             time.Duration
 }
 
 // FindNearest returns the nearest items in the tree to the specified query
@@ -59,7 +60,7 @@ func (t *Tracer) String() string {
 		return "nil"
 	}
 
-	return fmt.Sprintf("%v, total covered set size: %d, max visible cover set size: %d, levels traversed: %d, load children count: %d", t.TotalTime, t.TotalCoveredSetSize, t.MaxCoverSetSize, t.MaxLevelsTraversed, t.LoadChildrenCount)
+	return fmt.Sprintf("%v, total covered set size: %d, max visible cover set size: %d, levels traversed: %d, load children count: %d, total load children time: %v", t.TotalTime, t.TotalCoveredSetSize, t.MaxCoverSetSize, t.MaxLevelsTraversed, t.LoadChildrenCount, t.TotalLoadChildrenTime)
 }
 
 func (t *Tracer) doWithTrace(f func()) {
@@ -76,7 +77,15 @@ func (t *Tracer) doWithTrace(f func()) {
 }
 
 func (t *Tracer) loadChildren(parents ...interface{}) ([]LevelsWithItems, error) {
+	var startTime time.Time
+
 	t.LoadChildrenCount++
+
+	defer func() {
+		t.TotalLoadChildrenTime += time.Now().Sub(startTime)
+	}()
+
+	startTime = time.Now()
 	return t.tree.store.LoadChildren(parents...)
 }
 
@@ -96,4 +105,5 @@ func (t *Tracer) reset() {
 	t.MaxCoverSetSize = 0
 	t.MaxLevelsTraversed = 0
 	t.LoadChildrenCount = 0
+	t.TotalLoadChildrenTime = 0
 }
