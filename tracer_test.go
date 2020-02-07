@@ -6,11 +6,6 @@ import (
 	"time"
 )
 
-func slowDistanceBetweenPoints(a, b interface{}) float64 {
-	time.Sleep(1 * time.Millisecond)
-	return distanceBetweenPoints(a, b)
-}
-
 type slowInMemoryStore struct {
 	realStore *inMemoryStore
 }
@@ -37,7 +32,7 @@ func (s *slowInMemoryStore) UpdateItem(item, parent interface{}, level int) erro
 
 func newSlowInMemoryStore() *slowInMemoryStore {
 	return &slowInMemoryStore{
-		realStore: NewInMemoryStore(slowDistanceBetweenPoints),
+		realStore: NewInMemoryStore(distanceBetweenPoints),
 	}
 }
 
@@ -45,7 +40,7 @@ func TestTracer(t *testing.T) {
 
 	t.Run("FindNearest()", func(t *testing.T) {
 		store := newSlowInMemoryStore()
-		tree, _ := NewTreeWithStore(store, 2, 5.0, slowDistanceBetweenPoints)
+		tree, _ := NewTreeWithStore(store, 2, 5.0, distanceBetweenPoints)
 
 		points := []Point{
 			{1.0, 0.0, 0.0},
@@ -166,7 +161,7 @@ func TestTracer(t *testing.T) {
 
 		setup := func() *Tracer {
 			store = newSlowInMemoryStore()
-			tree, _ = NewTreeWithStore(store, 2, 5.0, slowDistanceBetweenPoints)
+			tree, _ = NewTreeWithStore(store, 2, 5.0, distanceBetweenPoints)
 			return tree.NewTracer()
 		}
 
@@ -327,7 +322,7 @@ func TestTracer(t *testing.T) {
 			t.Helper()
 
 			store = newSlowInMemoryStore()
-			tree, _ = NewTreeWithStore(store, 2, 32.0, slowDistanceBetweenPoints)
+			tree, _ = NewTreeWithStore(store, 2, 32.0, distanceBetweenPoints)
 
 			points := []Point{
 				{1.0, 0.0, 0.0},
