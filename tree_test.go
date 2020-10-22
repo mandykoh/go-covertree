@@ -181,7 +181,7 @@ func TestTree(t *testing.T) {
 
 	t.Run("Insert()", func(t *testing.T) {
 
-		t.Run("inserts duplicates of the root as children of the original item at the root", func(t *testing.T) {
+		t.Run("inserts duplicates of the root as sibling roots", func(t *testing.T) {
 			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 			store := tree.store.(*inMemoryStore)
 
@@ -201,6 +201,11 @@ func TestTree(t *testing.T) {
 
 			if expected, actual := 2, nodeCount; expected != actual {
 				t.Errorf("Expected %d nodes in tree after inserting duplicate but found %d", expected, actual)
+			}
+
+			levels := store.levelsFor(nil)
+			if expected, actual := 2, len(levels[tree.rootLevel]); expected != actual {
+				t.Errorf("Expected %d roots but got %d", expected, actual)
 			}
 
 			found, err := tree.FindNearest(&p2, 2, 0.0)
