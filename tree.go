@@ -155,10 +155,17 @@ func (t *Tree) insert(item interface{}, coverSet coverSet, level int, tracer *Tr
 
 	tracer.recordLevel(childCoverSet)
 
-	// A matching child which is at zero distance - item is a duplicate so insert it as a child
+	// A matching child which is at zero distance - item is a duplicate so insert it immediately
 	if layer := childCoverSet.layers[len(childCoverSet.layers)-1]; len(layer) > 0 {
 		if layer[0].withDistance.Distance == 0 {
-			err = t.store.AddItem(item, layer[0].withDistance.Item, level-2)
+
+			if layer[0].parent == nil {
+				// Insert duplicates of the root as children
+				err = t.store.AddItem(item, layer[0].withDistance.Item, level-2)
+			} else {
+				// Insert other duplicates as siblings
+				err = t.store.AddItem(item, layer[0].parent, level-1)
+			}
 			return item, err
 		}
 	}

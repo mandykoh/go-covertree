@@ -229,8 +229,10 @@ func traverseTree(tree *Tree, store *inMemoryStore, print bool) (nodeCount int) 
 
 	roots, _ := tree.NewTracer().loadChildren(nil)
 
-	for _, root := range roots[0].itemsAt(tree.rootLevel) {
-		nodeCount += traverseNodes(root, nil, tree.rootLevel, 0, store, print)
+	for _, root := range roots {
+		for _, rootNode := range root.itemsAt(tree.rootLevel) {
+			nodeCount += traverseNodes(rootNode, nil, tree.rootLevel, 0, store, print)
+		}
 	}
 	return
 }

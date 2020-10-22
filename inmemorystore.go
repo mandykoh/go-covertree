@@ -1,6 +1,8 @@
 package covertree
 
-import "sync"
+import (
+	"sync"
+)
 
 type inMemoryStore struct {
 	distanceBetween DistanceFunc

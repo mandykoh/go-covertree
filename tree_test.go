@@ -219,7 +219,7 @@ func TestTree(t *testing.T) {
 			}
 		})
 
-		t.Run("inserts duplicates as children of the original item", func(t *testing.T) {
+		t.Run("inserts duplicates as siblings of the original item", func(t *testing.T) {
 			tree := NewInMemoryTree(2, 1000.0, distanceBetweenPoints)
 			store := tree.store.(*inMemoryStore)
 
@@ -237,10 +237,26 @@ func TestTree(t *testing.T) {
 				t.Fatalf("Error inserting point into tree: %v", err)
 			}
 
-			nodeCount := traverseTree(tree, store, true)
+			nodeCount := traverseTree(tree, store, false)
 
 			if expected, actual := 4, nodeCount; expected != actual {
 				t.Errorf("Expected %d nodes in tree after inserting duplicate but found %d", expected, actual)
+			}
+
+			// Duplicate items should not be children of each other (they should
+			// have no children as they were inserted last).
+			children, err := store.LoadChildren(&p1, &p2)
+			if err != nil {
+				t.Fatalf("Expected to be able to load children but got error: %v", err)
+			}
+			if expected, actual := 2, len(children); expected != actual {
+				t.Errorf("Expected %d entries for children but got %d", expected, actual)
+			} else {
+				for i := range children {
+					if expected, actual := 0, len(children[i].items); expected != actual {
+						t.Errorf("Expected no children for item %d but found %d", i, actual)
+					}
+				}
 			}
 
 			found, err := tree.FindNearest(&p2, 2, 0.0)
